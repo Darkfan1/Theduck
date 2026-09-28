@@ -1,0 +1,303 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Color System - Clean Engineering Aesthetic */
+  --bg-main: #0a0e17;
+  --bg-surface: #0f172a;
+  --bg-card: #0f172a;
+  --bg-card-hover: #1e293b;
+  --bg-panel: rgba(15, 23, 42, 0.85);
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.16);
+  --border-active: #38bdf8;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-light: #cbd5e1;
+
+  /* Technical Accents */
+  --cyan-primary: #38bdf8;
+  --cyan-dim: #0284c7;
+  --purple-primary: #a855f7;
+  --indigo-primary: #6366f1;
+  --emerald-primary: #10b981;
+  --amber-primary: #f59e0b;
+  --rose-primary: #f43f5e;
+
+  /* Subtle Clean Gradient */
+  --gradient-tech: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  --gradient-dark: linear-gradient(180deg, #0f172a 0%, #0a0e17 100%);
+
+  /* Shadows - Minimal & Functional */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+
+  /* Layout */
+  --max-w: 1200px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 9999px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle Technical Grid Texture */
+.grid-overlay {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Container */
+.container {
+  width: 100%;
+  max-width: var(--max-w);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+}
+
+.text-gradient {
+  background: var(--gradient-tech);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.text-gradient-purple {
+  background: linear-gradient(135deg, #c084fc 0%, #818cf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.mono-tag {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: -0.01em;
+}
+
+/* Panels */
+.glass-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.glass-panel:hover {
+  border-color: var(--border-light);
+}
+
+.glass-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-light);
+}
+
+/* Buttons - Clean Engineering Style */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #0284c7;
+  color: #ffffff;
+  font-weight: 600;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #38bdf8;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: #0369a1;
+  border-color: #7dd3fc;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #1e293b;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #334155;
+  border-color: var(--border-light);
+}
+
+/* Clean Table Styles */
+.clean-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.88rem;
+}
+
+.clean-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  background: #0f172a;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.clean-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--text-light);
+  transition: background 0.15s ease;
+}
+
+.clean-table tr:hover td {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.clean-table tr .row-actions {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.clean-table tr:hover .row-actions {
+  opacity: 1;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0e17;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+@media (min-width: 900px) {
+  .desktop-nav {
+    display: flex !important;
+  }
+  .mobile-toggle {
+    display: none !important;
+  }
+  .mobile-tab-bar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 899px) {
+  .desktop-nav {
+    display: none !important;
+  }
+  .mobile-tab-bar {
+    display: flex !important;
+  }
+}
+
+/* Tab Switching Transitions */
+.tab-fade-in {
+  animation: tabFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
