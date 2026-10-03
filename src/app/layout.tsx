@@ -52,7 +52,6 @@ export default function RootLayout({
     '@type': 'Person',
     name: 'Tôn Đông Vũ',
     alternateName: 'The Duck',
-    birthDate: '1982',
     url: 'https://theduck.io.vn',
     email: 'thewind2608@gmail.com',
     telephone: '+84939839934',
@@ -84,6 +83,8 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
+        <div className="ambient-glow-top" />
+        <div className="ambient-glow-side" />
         <div className="grid-overlay" />
         {children}
       </body>

@@ -81,56 +81,81 @@ body {
   z-index: 0;
 }
 
+/* Ambient background disabled for clean aesthetic */
+.ambient-glow-top,
+.ambient-glow-side {
+  display: none;
+}
+
 /* Container */
 .container {
   width: 100%;
   max-width: var(--max-w);
   margin-left: auto;
   margin-right: auto;
-  padding-left: 24px;
-  padding-right: 24px;
+  padding-left: 20px;
+  padding-right: 20px;
   position: relative;
   z-index: 1;
 }
 
-/* Typography */
+/* Typography - Clean & Restrained */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: -0.015em;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
 }
 
 .text-gradient {
-  background: var(--gradient-tech);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: inline-block;
-}
-
-.text-gradient-purple {
-  background: linear-gradient(135deg, #c084fc 0%, #818cf8 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: inline-block;
+  color: #38bdf8;
+  display: inline;
 }
 
 .mono-tag {
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   letter-spacing: -0.01em;
+}
+
+/* Clean Professional Card */
+.bento-card {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-sm);
+  position: relative;
+  transition: border-color 0.15s ease;
+}
+
+.bento-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.bento-card-interactive {
+  cursor: pointer;
+}
+
+.bento-card-interactive:hover {
+  border-color: #38bdf8;
+  background: #131d35;
+}
+
+/* Pulse animation - small & subtle */
+.pulse-indicator {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
 }
 
 /* Panels */
 .glass-panel {
-  background: var(--bg-card);
+  background: #0f172a;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  transition: border-color 0.2s ease, transform 0.2s ease;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s ease;
   position: relative;
 }
 
@@ -141,56 +166,55 @@ h1, h2, h3, h4, h5, h6 {
 .glass-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 12px;
-  background: rgba(15, 23, 42, 0.9);
+  gap: 6px;
+  padding: 4px 10px;
+  background: #0f172a;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  color: var(--text-light);
+  color: var(--text-secondary);
 }
 
-/* Buttons - Clean Engineering Style */
+/* Buttons - Clean, Functional, No Hype */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: 6px;
+  padding: 8px 16px;
   background: #0284c7;
   color: #ffffff;
   font-weight: 600;
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   border-radius: var(--radius-sm);
   border: 1px solid #38bdf8;
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease;
 }
 
 .btn-primary:hover {
   background: #0369a1;
-  border-color: #7dd3fc;
 }
 
 .btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: 6px;
+  padding: 8px 16px;
   background: #1e293b;
   color: var(--text-primary);
   font-weight: 500;
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease;
 }
 
 .btn-secondary:hover {

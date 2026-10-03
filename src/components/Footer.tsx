@@ -65,7 +65,7 @@ export default function Footer({ onSelectTab }: FooterProps) {
                 {PORTFOLIO_DATA.personal.fullName}
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Kỹ thuật &amp; Vận hành Sản xuất • In ấn, Bao bì &amp; Mini ERP
+                Đồng hành &amp; Chia sẻ
               </div>
             </div>
           </div>

@@ -41,11 +41,9 @@ export default function ExperienceSection() {
           {experiences.map((exp) => (
             <div
               key={exp.id}
+              className="bento-card"
               style={{
-                padding: '24px 28px',
-                background: '#0f172a',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-sm)',
+                padding: '28px',
               }}
             >
               {/* Top Bar: Role & Tag */}

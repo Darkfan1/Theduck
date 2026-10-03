@@ -2,514 +2,423 @@
 
 import React from 'react';
 import { PORTFOLIO_DATA } from '@/data/portfolioData';
+import { TabKey } from './Navbar';
 import { 
   Phone, 
   Mail, 
   MessageCircle, 
-  Sliders, 
-  Wrench, 
   Layers, 
   Package, 
   FileSpreadsheet, 
   Cpu, 
   Printer, 
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  Warehouse,
+  Factory,
+  Wrench,
+  CheckCircle2,
+  Code2,
+  Monitor
 } from 'lucide-react';
 
-export default function AboutSection() {
+interface AboutSectionProps {
+  onSelectTab?: (tab: TabKey) => void;
+}
+
+export default function AboutSection({ onSelectTab }: AboutSectionProps) {
   const { personal } = PORTFOLIO_DATA;
+
+  const careerStages = [
+    {
+      stage: '01',
+      period: '3 Năm Đầu',
+      role: 'Quản lý kho & Quản trị vật tư',
+      desc: 'Hình thành nền tảng về kỷ luật số liệu, định mức nguyên vật liệu (BOM), kiểm soát tồn kho và dòng chảy hàng hóa. Hiểu sâu sắc giá trị của từng con số tồn kho và sự thất thoát trên sàn xưởng nếu số liệu không chuẩn xác.'
+    },
+    {
+      stage: '02',
+      period: 'Giai Đoạn Kỹ Thuật',
+      role: 'Kỹ thuật & Mỹ thuật công nghiệp in ấn',
+      desc: 'Đi sâu vào thiết kế bao bì nhựa, bao bì carton, tem nhãn cuộn/tờ, bình trang, xử lý file in và kỹ thuật trục in. Nắm vững đặc tính máy móc, khổ màng, khổ giấy — nền tảng để phần mềm tính giá & bình file không xa rời thực tế.'
+    },
+    {
+      stage: '03',
+      period: 'Giai Đoạn Quản Trị',
+      role: 'Quản trị sản xuất & Điều hành xưởng',
+      desc: 'Trực tiếp điều hành chuỗi vận hành: từ đơn hàng, nguyên vật liệu, lệnh sản xuất (LSX), con người, máy móc, QA/QC đến xuất kho giao hàng. Nhìn nhận doanh nghiệp từ góc nhìn tổng thể liên hoàn, nắm bắt chính xác nơi phát sinh nút thắt cổ chai.'
+    },
+    {
+      stage: '04',
+      period: 'Hiện Tại',
+      role: 'Kiến trúc phần mềm thực chiến & Mini ERP may đo',
+      desc: 'Nhận ra bài toán doanh nghiệp nghẽn do quy trình và sự phân tán của các file Excel rời rạc. Tự tay thiết kế và xây dựng các ứng dụng, tool chuyên dụng và hệ thống Mini ERP may đo tinh gọn, sát thực tế sản xuất.'
+    }
+  ];
 
   const solutions = [
     {
-      title: "Web App / Desktop App cho các quy trình nội bộ",
-      desc: "Ứng dụng chuyên biệt cho phòng ban nội bộ, chạy mượt mà trên trình duyệt lẫn cài đặt desktop nhẹ nhàng, tối ưu thao tác hàng ngày.",
-      icon: <Sliders size={20} color="var(--cyan-primary)" />
+      title: 'Mini ERP May Đo Cho Doanh Nghiệp SME',
+      desc: 'Giải pháp quản trị tinh gọn theo quy trình thực tế của doanh nghiệp, không cồng kềnh, không tính năng thừa, dễ học và áp dụng ngay.',
+      icon: <Layers size={18} color="var(--cyan-primary)" />
     },
     {
-      title: "Tool chuyên dụng cho thiết kế, kỹ thuật và sản xuất",
-      desc: "Công cụ hỗ trợ xử lý file, bình trang, tính khổ giấy/màng, quản lý thông số kỹ thuật in ấn và giảm thiểu thao tác lặp lại.",
-      icon: <Wrench size={20} color="#a855f7" />
+      title: 'Chuyên Sâu Ngành In Ấn, Tem Nhãn & Bao Bì',
+      desc: 'Ứng dụng kinh nghiệm thực tế giải quyết bài toán in cuộn, in tờ rời, tem mã vạch siêu tốc qua iframe, bao bì carton & bao bì nhựa.',
+      icon: <Printer size={18} color="var(--cyan-primary)" />
     },
     {
-      title: "Mini ERP cho doanh nghiệp vừa và nhỏ",
-      desc: "Giải pháp quản trị tinh gọn may đo theo quy trình thực tế của doanh nghiệp, không cồng kềnh, không tính năng thừa, dễ học và dễ áp dụng.",
-      icon: <Layers size={20} color="#34d399" />
+      title: 'Web App & Desktop App (Tauri v2 Native)',
+      desc: 'Ứng dụng chuyên biệt cho phòng ban nội bộ, chạy mượt mà trên trình duyệt lẫn cài đặt desktop siêu nhẹ (<70MB RAM), tối ưu thao tác hàng ngày.',
+      icon: <Monitor size={18} color="var(--cyan-primary)" />
     },
     {
-      title: "Công cụ quản lý đơn hàng, sản xuất, kho và giao nhận",
-      desc: "Kiểm soát dòng chảy thông tin xuyên suốt từ lúc nhận đơn, lập lệnh sản xuất, theo dõi tiến độ, trừ kho nguyên liệu tới xuất kho giao hàng.",
-      icon: <Package size={20} color="#38bdf8" />
+      title: 'Tự Động Hóa Thay Thế Excel Rời Rạc',
+      desc: 'Số hóa và thay thế việc nhập liệu thủ công bằng nhiều file Excel rời rạc, chống sai lệch số liệu và tiết kiệm hàng giờ mỗi ngày.',
+      icon: <Cpu size={18} color="var(--cyan-primary)" />
     },
     {
-      title: "Công cụ tính giá, báo giá và quản lý dữ liệu khách hàng",
-      desc: "Tự động hóa công thức tính giá thành sản phẩm phức tạp theo cấu trúc định mức nguyên vật liệu (BOM), xuất báo giá nhanh và chuẩn xác.",
-      icon: <FileSpreadsheet size={20} color="#f59e0b" />
+      title: 'Công Cụ Tính Giá, Báo Giá & Quản Trị BOM',
+      desc: 'Tự động hóa công thức tính giá thành sản phẩm phức tạp theo cấu trúc định mức nguyên vật liệu (BOM), xuất báo giá nhanh và chuẩn xác.',
+      icon: <FileSpreadsheet size={18} color="var(--cyan-primary)" />
     },
     {
-      title: "Các hệ thống tự động hóa những công việc thủ công, lặp lại",
-      desc: "Số hóa và thay thế việc nhập liệu thủ công bằng nhiều file Excel rời rạc, chống sai lệch số liệu và tiết kiệm hàng giờ mỗi ngày.",
-      icon: <Cpu size={20} color="#ec4899" />
-    },
-    {
-      title: "Giải pháp số hóa các quy trình đặc thù trong in ấn, tem nhãn và bao bì",
-      desc: "Ứng dụng kinh nghiệm thực chiến giải quyết triệt để các bài toán in cuộn, in tờ rời, tem mã vạch, bao bì carton & bao bì nhựa.",
-      icon: <Printer size={20} color="var(--cyan-primary)" />
+      title: 'Tool Hỗ Trợ Thiết Kế & Kỹ Thuật',
+      desc: 'Công cụ hỗ trợ xử lý file, bình trang, tính khổ giấy/màng, quản lý thông số kỹ thuật in ấn và giảm thiểu thao tác lặp lại.',
+      icon: <Wrench size={18} color="var(--cyan-primary)" />
     }
   ];
 
   return (
-    <section id="about" style={{ padding: '20px 0 80px 0', position: 'relative' }}>
-      <div className="container" style={{ maxWidth: '980px' }}>
+    <section id="about" style={{ padding: '8px 0 60px 0', position: 'relative' }}>
+      <div className="container" style={{ maxWidth: '840px' }}>
 
-        {/* Technical Profile Header */}
-        <div
-          style={{
-            padding: '32px',
-            background: '#0f172a',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: '40px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '0.85rem', color: 'var(--cyan-primary)', fontFamily: 'var(--font-mono)' }}>
-            <span>HỒ SƠ NĂNG LỰC CÁ NHÂN</span>
-            <span>•</span>
-            <span>TÔN ĐÔNG VŨ (1982)</span>
+        {/* ========================================================= */}
+        {/* HEADER: ĐƠN GIẢN, GỌN GÀNG, KHIÊM TỐN */}
+        {/* ========================================================= */}
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#f8fafc', margin: 0, letterSpacing: '-0.01em' }}>
+              {personal.fullName}
+            </h1>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Đồng Nai, Việt Nam • Onsite &amp; Remote
+            </span>
           </div>
 
-          <h1 style={{ fontSize: 'clamp(1.8rem, 3.2vw, 2.4rem)', fontWeight: 800, color: '#f8fafc', marginBottom: '12px' }}>
-            Kỹ Thuật &amp; Vận Hành Sản Xuất — Giải Pháp Phần Mềm Doanh Nghiệp
-          </h1>
+          <div style={{ fontSize: '0.92rem', color: 'var(--cyan-primary)', fontWeight: 500, marginBottom: '14px' }}>
+            Kỹ thuật &amp; Vận hành sản xuất • Giải pháp phần mềm doanh nghiệp (MES / Mini ERP)
+          </div>
 
-          <p style={{ fontSize: '1.05rem', color: 'var(--text-light)', lineHeight: 1.6, margin: 0 }}>
+          <p style={{ fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.7, margin: '0 0 18px 0' }}>
             {personal.shortBio}
           </p>
+
+          {/* Nút hành động nhỏ gọn */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              onClick={() => onSelectTab ? onSelectTab('projects') : undefined}
+              className="btn-primary"
+              style={{ padding: '7px 14px', fontSize: '0.82rem' }}
+            >
+              Trải nghiệm Demo Mini ERP
+              <ArrowRight size={14} />
+            </button>
+
+            <a
+              href={personal.contact.zalo}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary"
+              style={{ padding: '7px 14px', fontSize: '0.82rem' }}
+            >
+              <MessageCircle size={14} />
+              Zalo: {personal.contact.phone}
+            </a>
+
+            <button
+              onClick={() => onSelectTab ? onSelectTab('experience') : undefined}
+              className="btn-secondary"
+              style={{ padding: '7px 14px', fontSize: '0.82rem', background: 'transparent' }}
+            >
+              Xem kinh nghiệm thực chiến
+            </button>
+          </div>
         </div>
-        
+
+        <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.07)', marginBottom: '32px' }} />
+
         {/* ========================================================= */}
-        {/* PHẦN 1: TÔI LÀ AI */}
+        {/* PHẦN 1: HÀNH TRÌNH TỪ SÀN XƯỞNG ĐẾN CÔNG NGHỆ */}
         {/* ========================================================= */}
-        <div style={{ marginBottom: '48px' }}>
-          <h2
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: '#f8fafc',
-              marginBottom: '16px',
-              paddingBottom: '8px',
-              borderBottom: '1px solid var(--border-subtle)',
-            }}
-          >
-            Tôi là ai
+        <div style={{ marginBottom: '36px' }}>
+          <h2 style={{ fontSize: '1.12rem', fontWeight: 700, color: '#f8fafc', marginBottom: '14px' }}>
+            Hành trình từ sàn xưởng đến công nghệ
           </h2>
 
-          <div
-            style={{
-              padding: '28px',
-              background: '#0f172a',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              fontSize: '1.02rem',
-              lineHeight: 1.8,
-              color: 'var(--text-light)',
-            }}
-          >
-            {personal.story.whoAmI.paragraphs.map((p, idx) => (
-              <p key={idx} style={{ margin: 0 }}>
-                {p}
-              </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {careerStages.map((stg) => (
+              <div
+                key={stg.stage}
+                style={{
+                  padding: '16px 18px',
+                  background: '#0f172a',
+                  border: '1px solid rgba(255, 255, 255, 0.07)',
+                  borderRadius: '6px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                  <span style={{ fontSize: '0.92rem', fontWeight: 600, color: '#ffffff' }}>
+                    {stg.stage}. {stg.role}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                    {stg.period}
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>
+                  {stg.desc}
+                </p>
+              </div>
             ))}
           </div>
         </div>
 
         {/* ========================================================= */}
-        {/* PHẦN 2: TỪ SẢN XUẤT ĐẾN CÔNG NGHỆ */}
+        {/* PHẦN 2: TRIẾT LÝ LÀM VIỆC */}
         {/* ========================================================= */}
-        <div style={{ marginBottom: '48px' }}>
-          <h2
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: '#f8fafc',
-              marginBottom: '16px',
-              paddingBottom: '8px',
-              borderBottom: '1px solid var(--border-subtle)',
-            }}
-          >
-            Từ sản xuất đến công nghệ
+        <div
+          style={{
+            padding: '20px 22px',
+            background: '#0f172a',
+            border: '1px solid rgba(255, 255, 255, 0.07)',
+            borderRadius: '6px',
+            marginBottom: '36px',
+          }}
+        >
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', marginBottom: '10px' }}>
+            Triết lý làm việc
           </h2>
 
-          <div
-            style={{
-              padding: '28px',
-              background: '#0f172a',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              fontSize: '1.02rem',
-              lineHeight: 1.8,
-              color: 'var(--text-light)',
-            }}
-          >
-            <p style={{ margin: 0 }}>
-              Trong quá trình quản lý và vận hành thực tế, tôi nhận ra rằng rất nhiều vấn đề trong doanh nghiệp không nằm ở việc thiếu nhân sự hay thiếu phần mềm, mà nằm ở việc quy trình chưa được thiết kế đúng và thông tin chưa được kết nối hiệu quả.
-            </p>
-
-            <p style={{ margin: 0 }}>
-              Đó cũng là lý do tôi bắt đầu dành nhiều thời gian hơn cho việc xây dựng các ứng dụng, công cụ quản trị và mini ERP để giải quyết những bài toán thực tế trong doanh nghiệp.
-            </p>
-
-            <p style={{ margin: 0 }}>
-              Tôi đặc biệt tập trung vào các giải pháp cho ngành in ấn, tem nhãn, bao bì và sản xuất công nghiệp, nơi tôi có lợi thế lớn về kinh nghiệm thực tế.
-            </p>
-
-            <div
-              style={{
-                marginTop: '8px',
-                padding: '20px 24px',
-                borderRadius: '8px',
-                background: '#162032',
-                borderLeft: '4px solid var(--cyan-primary)',
-              }}
-            >
-              <div style={{ color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.95rem' }}>
-                Tôi không tiếp cận một bài toán chỉ từ góc độ lập trình. Tôi bắt đầu từ câu hỏi:
-              </div>
-              <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', marginBottom: '8px', fontStyle: 'italic' }}>
-                “Doanh nghiệp đang gặp vấn đề gì và quy trình thực tế đang vận hành như thế nào?”
-              </div>
-              <div style={{ color: 'var(--cyan-primary)', fontSize: '0.95rem', fontWeight: 600 }}>
-                Sau đó mới tìm cách dùng công nghệ để giải quyết nó một cách đơn giản, phù hợp và có tính ứng dụng cao.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================================= */}
-        {/* PHẦN 3: TÔI CÓ THỂ GIÚP GÌ? */}
-        {/* ========================================================= */}
-        <div style={{ marginBottom: '48px' }}>
-          <h2
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: '#f8fafc',
-              marginBottom: '16px',
-              paddingBottom: '8px',
-              borderBottom: '1px solid var(--border-subtle)',
-            }}
-          >
-            Tôi có thể giúp gì?
-          </h2>
-
-          <p style={{ color: 'var(--text-light)', fontSize: '1rem', marginBottom: '20px' }}>
-            Tôi nhận phát triển các giải pháp theo nhu cầu thực tế, chẳng hạn:
+          <p style={{ fontSize: '0.88rem', color: '#cbd5e1', lineHeight: 1.7, margin: '0 0 16px 0' }}>
+            “Tôi không tiếp cận bài toán chỉ từ góc độ lập trình viên. Tôi bắt đầu từ câu hỏi: <em>Doanh nghiệp đang gặp vấn đề gì và quy trình thực tế đang vận hành như thế nào?</em> Sau đó mới tìm cách dùng công nghệ để giải quyết nó một cách đơn giản, phù hợp và có tính ứng dụng cao.”
           </p>
 
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
-              gap: '14px',
-              marginBottom: '20px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+              gap: '10px',
+            }}
+          >
+            {[
+              {
+                step: '01',
+                title: 'Hiểu đúng vấn đề',
+                desc: 'Đi từ thực tế vận hành và người làm trực tiếp để tìm đúng nguyên nhân gốc rễ.'
+              },
+              {
+                step: '02',
+                title: 'Thiết kế đúng quy trình',
+                desc: 'Loại bỏ thao tác thừa, chuẩn hóa đường đi của thông tin trước khi viết code.'
+              },
+              {
+                step: '03',
+                title: 'Xây dựng đúng công cụ',
+                desc: 'Giao diện trực quan, tốc độ xử lý nhanh, thao tác gọn và giải quyết đúng việc.'
+              }
+            ].map((p, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: '12px 14px',
+                  background: '#162032',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(255, 255, 255, 0.04)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 700, color: 'var(--cyan-primary)' }}>
+                    {p.step}.
+                  </span>
+                  <span style={{ fontSize: '0.86rem', fontWeight: 600, color: '#ffffff' }}>
+                    {p.title}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  {p.desc}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* PHẦN 3: CÁC BÀI TOÁN TÔI CÓ THỂ GIÚP DOANH NGHIỆP */}
+        {/* ========================================================= */}
+        <div style={{ marginBottom: '36px' }}>
+          <h2 style={{ fontSize: '1.12rem', fontWeight: 700, color: '#f8fafc', marginBottom: '14px' }}>
+            Các giải pháp tôi có thể hỗ trợ doanh nghiệp
+          </h2>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '10px',
+              marginBottom: '16px',
             }}
           >
             {solutions.map((item, idx) => (
               <div
                 key={idx}
                 style={{
-                  padding: '20px',
+                  padding: '16px 18px',
                   background: '#0f172a',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  borderRadius: '6px',
                   display: 'flex',
-                  gap: '14px',
-                  alignItems: 'flex-start',
+                  flexDirection: 'column',
+                  gap: '6px',
                 }}
               >
-                <div style={{ marginTop: '2px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {item.icon}
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '0.98rem', color: '#ffffff', fontWeight: 700, marginBottom: '6px', lineHeight: 1.4 }}>
+                  <h3 style={{ fontSize: '0.9rem', color: '#ffffff', fontWeight: 600, margin: 0 }}>
                     {item.title}
                   </h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                    {item.desc}
-                  </p>
                 </div>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                  {item.desc}
+                </p>
               </div>
             ))}
           </div>
 
           <div
             style={{
-              padding: '16px 20px',
-              borderRadius: '8px',
-              background: '#162032',
-              border: '1px solid var(--border-subtle)',
-              fontSize: '0.92rem',
+              padding: '12px 16px',
+              borderRadius: '6px',
+              background: '#0f172a',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              fontSize: '0.84rem',
               color: 'var(--text-light)',
+              lineHeight: 1.6,
             }}
           >
-            <strong style={{ color: 'var(--cyan-primary)' }}>Lưu ý:</strong> Tôi đặc biệt quan tâm đến những bài toán mà các phần mềm phổ thông khó đáp ứng vì mỗi doanh nghiệp có một cách vận hành riêng.
+            <strong style={{ color: 'var(--cyan-primary)' }}>Lưu ý:</strong> Tôi đặc biệt quan tâm và có thế mạnh với những bài toán đặc thù mà phần mềm đóng gói sẵn khó đáp ứng do mỗi doanh nghiệp sản xuất - in ấn có quy trình riêng biệt.
           </div>
         </div>
 
         {/* ========================================================= */}
-        {/* PHẦN 4: TRIẾT LÝ LÀM VIỆC */}
+        {/* PHẦN 4: BẢN THỬ NGHIỆM DEMO MINI ERP */}
         {/* ========================================================= */}
-        <div style={{ marginBottom: '48px' }}>
-          <h2
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: '#f8fafc',
-              marginBottom: '16px',
-              paddingBottom: '8px',
-              borderBottom: '1px solid var(--border-subtle)',
-            }}
-          >
-            Triết lý làm việc
-          </h2>
-
-          <div
-            style={{
-              padding: '28px',
-              background: '#0f172a',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              fontSize: '1.02rem',
-              lineHeight: 1.8,
-              color: 'var(--text-light)',
-            }}
-          >
-            <p style={{ margin: 0, fontWeight: 600, color: '#ffffff', fontSize: '1.1rem' }}>
-              Tôi tin rằng phần mềm tốt không nhất thiết phải phức tạp.
+        <div
+          style={{
+            padding: '20px 22px',
+            background: '#0f172a',
+            border: '1px solid rgba(56, 189, 248, 0.2)',
+            borderRadius: '6px',
+            marginBottom: '36px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px',
+          }}
+        >
+          <div style={{ maxWidth: '580px' }}>
+            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#ffffff', marginBottom: '6px' }}>
+              Hệ thống Mini ERP Quản trị Sản xuất ProTrack (Bản Demo)
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+              Trải nghiệm thực tế hệ thống theo dõi tiến độ đơn hàng sản xuất: Clean Table Rule, in tem barcode trực tiếp qua iframe không giật lag và chẩn đoán tiến độ đơn hàng.
             </p>
-
-            <p style={{ margin: 0 }}>
-              Một công cụ tốt là công cụ mà người trực tiếp sử dụng có thể hiểu, thao tác nhanh và giải quyết được đúng vấn đề họ đang gặp phải.
-            </p>
-
-            <p style={{ margin: 0 }}>
-              Hơn 20 năm đi từ sàn xưởng, kho bãi đến bàn quản trị cho tôi một góc nhìn khá đặc biệt: hiểu vấn đề từ thực tế trước khi tìm giải pháp bằng công nghệ.
-            </p>
-
-            {/* 3 Principles Flow */}
-            <div style={{ marginTop: '12px', paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '14px', letterSpacing: '0.05em' }}>
-                TÔI LUÔN GIỮ BA NGUYÊN TẮC:
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: '12px',
-                }}
-              >
-                {[
-                  { step: '01', title: 'Hiểu đúng vấn đề' },
-                  { step: '02', title: 'Thiết kế đúng quy trình' },
-                  { step: '03', title: 'Xây dựng đúng công cụ' }
-                ].map((item, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: '16px 20px',
-                      background: '#162032',
-                      borderRadius: '6px',
-                      border: '1px solid var(--border-subtle)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                    }}
-                  >
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.2rem', fontWeight: 800, color: 'var(--cyan-primary)' }}>
-                      {item.step}
-                    </span>
-                    <span style={{ fontWeight: 700, fontSize: '0.98rem', color: '#f8fafc' }}>
-                      {item.title}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
+
+          <button
+            onClick={() => onSelectTab ? onSelectTab('projects') : undefined}
+            className="btn-primary"
+            style={{ padding: '8px 16px', fontSize: '0.84rem', whiteSpace: 'nowrap' }}
+          >
+            Mở xem Live Demo →
+          </button>
         </div>
 
         {/* ========================================================= */}
-        {/* PHẦN 5: ĐỊNH HƯỚNG */}
+        {/* PHẦN 5: ĐỒNG HÀNH & KẾT NỐI */}
         {/* ========================================================= */}
-        <div style={{ marginBottom: '48px' }}>
-          <h2
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: '#f8fafc',
-              marginBottom: '16px',
-              paddingBottom: '8px',
-              borderBottom: '1px solid var(--border-subtle)',
-            }}
-          >
-            Định hướng
+        <div
+          style={{
+            padding: '22px 24px',
+            background: '#0f172a',
+            border: '1px solid rgba(255, 255, 255, 0.07)',
+            borderRadius: '6px',
+          }}
+        >
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
+            Đồng hành &amp; Kết nối
           </h2>
+          <p style={{ fontSize: '0.88rem', color: 'var(--text-light)', lineHeight: 1.65, margin: '0 0 16px 0' }}>
+            Nếu bạn có một vấn đề thực tế và đang nghĩ: <em>“Giá mà có một phần mềm làm được việc này…”</em> — hãy liên hệ với tôi để cùng trao đổi và tìm giải pháp phù hợp nhất.
+          </p>
 
           <div
             style={{
-              padding: '28px',
-              background: '#0f172a',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
               display: 'flex',
-              flexDirection: 'column',
               gap: '16px',
-              fontSize: '1.02rem',
-              lineHeight: 1.8,
-              color: 'var(--text-light)',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              fontSize: '0.86rem',
             }}
           >
-            <p style={{ margin: 0 }}>
-              Tôi đang phát triển con đường freelancer theo hướng kết hợp giữa kinh nghiệm vận hành sản xuất và công nghệ phần mềm, tập trung vào các giải pháp thực tế cho doanh nghiệp trong lĩnh vực in ấn, tem nhãn, bao bì và sản xuất công nghiệp.
-            </p>
-
-            <p style={{ margin: 0 }}>
-              Tôi mong muốn hợp tác với những doanh nghiệp đang có những quy trình còn thủ công, dữ liệu còn phân tán hoặc đang gặp những bài toán quản trị mà phần mềm thông thường chưa giải quyết được.
-            </p>
-
-            <div
+            <a
+              href={personal.contact.zalo}
+              target="_blank"
+              rel="noopener noreferrer"
               style={{
-                marginTop: '8px',
-                padding: '20px 24px',
-                borderRadius: '8px',
-                background: '#162032',
-                borderLeft: '4px solid var(--cyan-primary)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: 'var(--cyan-primary)',
+                textDecoration: 'none',
+                fontWeight: 600,
               }}
             >
-              <div style={{ color: 'var(--text-secondary)', marginBottom: '6px', fontSize: '0.95rem' }}>
-                Nếu bạn có một vấn đề thực tế và đang nghĩ:
-              </div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ffffff', marginBottom: '8px', fontStyle: 'italic' }}>
-                “Giá mà có một phần mềm làm được việc này…”
-              </div>
-              <div style={{ color: 'var(--cyan-primary)', fontWeight: 600, fontSize: '0.98rem' }}>
-                Có thể đó chính là thứ tôi có thể giúp bạn xây dựng.
-              </div>
-            </div>
-          </div>
-        </div>
+              <MessageCircle size={15} />
+              Zalo: {personal.contact.phone}
+            </a>
 
-        {/* ========================================================= */}
-        {/* PHẦN 6: HÃY GIỮ LIÊN LẠC */}
-        {/* ========================================================= */}
-        <div>
-          <h2
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 800,
-              color: '#f8fafc',
-              marginBottom: '16px',
-              paddingBottom: '8px',
-              borderBottom: '1px solid var(--border-subtle)',
-            }}
-          >
-            Hãy giữ liên lạc
-          </h2>
+            <span style={{ color: 'var(--border-light)' }}>•</span>
 
-          <div
-            style={{
-              padding: '28px',
-              background: '#0f172a',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-            }}
-          >
-            <p style={{ color: 'var(--text-light)', fontSize: '1.02rem', lineHeight: 1.8, marginBottom: '24px' }}>
-              Nếu bạn muốn trao đổi về một dự án phần mềm, tìm kiếm giải pháp cho quy trình sản xuất – in ấn, trao đổi chuyên môn hoặc đơn giản là mở rộng mạng lưới quan hệ công việc, tôi rất vui được kết nối.
-            </p>
-
-            <div
+            <a
+              href={`tel:${personal.contact.phone.replace(/\s+/g, '')}`}
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                gap: '16px',
-                marginBottom: '24px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#f8fafc',
+                textDecoration: 'none',
               }}
             >
-              <a
-                href={`mailto:${personal.contact.email}`}
-                style={{
-                  padding: '16px 20px',
-                  background: '#162032',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                }}
-              >
-                <Mail size={20} color="var(--cyan-primary)" />
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                    Email
-                  </div>
-                  <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#ffffff' }}>
-                    {personal.contact.email}
-                  </div>
-                </div>
-              </a>
+              <Phone size={14} color="var(--text-muted)" />
+              {personal.contact.phone}
+            </a>
 
-              <a
-                href={`tel:${personal.contact.phone.replace(/\s+/g, '')}`}
-                style={{
-                  padding: '16px 20px',
-                  background: '#162032',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                }}
-              >
-                <Phone size={20} color="var(--emerald-primary)" />
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                    Điện thoại / Zalo
-                  </div>
-                  <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#ffffff' }}>
-                    {personal.contact.phone}
-                  </div>
-                </div>
-              </a>
-            </div>
+            <span style={{ color: 'var(--border-light)' }}>•</span>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <a
-                href={personal.contact.zalo}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary"
-                style={{ padding: '9px 18px', fontSize: '0.9rem' }}
-              >
-                <MessageCircle size={16} />
-                Nhắn Zalo: {personal.contact.phone}
-                <ExternalLink size={14} />
-              </a>
-            </div>
+            <a
+              href={`mailto:${personal.contact.email}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#f8fafc',
+                textDecoration: 'none',
+              }}
+            >
+              <Mail size={14} color="var(--text-muted)" />
+              {personal.contact.email}
+            </a>
           </div>
         </div>
 

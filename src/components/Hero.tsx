@@ -61,7 +61,7 @@ export default function Hero({ onNavigateTab }: { onNavigateTab?: (tab: TabKey) 
                   color: 'var(--text-secondary)',
                 }}
               >
-                <span>Tôn Đông Vũ (1982)</span>
+                <span>Tôn Đông Vũ</span>
                 <span style={{ color: 'var(--cyan-primary)' }}>•</span>
                 <span>20+ Năm Ngành Sản Xuất &amp; In Ấn</span>
               </div>

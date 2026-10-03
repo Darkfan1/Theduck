@@ -40,11 +40,9 @@ export default function FeaturedProjects() {
           {projects.filter(p => p.id !== 'mini-erp').map((proj) => (
             <div
               key={proj.id}
+              className="bento-card"
               style={{
                 padding: '24px 28px',
-                background: '#0f172a',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-sm)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>

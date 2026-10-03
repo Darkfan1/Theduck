@@ -42,7 +42,7 @@ export default function Home() {
         {/* TAB 1: TỔNG QUAN (Giới thiệu bản thân) */}
         {activeTab === 'overview' && (
           <div className="tab-fade-in">
-            <AboutSection />
+            <AboutSection onSelectTab={handleSelectTab} />
           </div>
         )}
 

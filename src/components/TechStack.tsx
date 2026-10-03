@@ -58,11 +58,9 @@ export default function TechStack() {
           {skills.map((group, gIdx) => (
             <div
               key={gIdx}
+              className="bento-card"
               style={{
                 padding: '24px',
-                background: '#0f172a',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-sm)',
                 display: 'flex',
                 flexDirection: 'column',
               }}

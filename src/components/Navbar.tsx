@@ -65,30 +65,27 @@ export default function Navbar({ activeTab, onSelectTab }: NavbarProps) {
         >
           <div
             style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
+              width: '34px',
+              height: '34px',
+              borderRadius: '6px',
               background: '#0f172a',
-              border: '1px solid var(--border-light)',
+              border: '1px solid var(--border-subtle)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '1.2rem',
+              fontSize: '1.15rem',
             }}
           >
             🦆
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.98rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                 {personal.fullName}
-              </span>
-              <span style={{ color: 'var(--cyan-primary)', fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}>
-                ({personal.birthYear})
               </span>
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-              Kỹ thuật &amp; Vận hành Sản xuất • In ấn &amp; Mini ERP
+              Đồng hành &amp; Chia sẻ
             </div>
           </div>
         </button>
@@ -100,8 +97,8 @@ export default function Navbar({ activeTab, onSelectTab }: NavbarProps) {
             gap: '4px',
             alignItems: 'center',
             background: '#0f172a',
-            padding: '4px',
-            borderRadius: 'var(--radius-sm)',
+            padding: '3px 4px',
+            borderRadius: '6px',
             border: '1px solid var(--border-subtle)',
           }}
           className="desktop-nav"
@@ -116,13 +113,13 @@ export default function Navbar({ activeTab, onSelectTab }: NavbarProps) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 14px',
+                  padding: '6px 14px',
                   borderRadius: '4px',
                   background: isActive ? '#1e293b' : 'transparent',
-                  color: isActive ? '#38bdf8' : 'var(--text-secondary)',
+                  color: isActive ? '#f8fafc' : 'var(--text-secondary)',
                   fontWeight: isActive ? 600 : 500,
-                  fontSize: '0.85rem',
-                  border: isActive ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent',
+                  fontSize: '0.84rem',
+                  border: isActive ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid transparent',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
