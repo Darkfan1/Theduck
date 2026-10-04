@@ -325,3 +325,178 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateY(0);
   }
 }
+
+/* ==========================================================================
+   DUCK FARM WORLD - PHONG CÁCH NÔNG TRẠI VỊT ĐỘC ĐÁO & TƯƠNG TÁC
+   ========================================================================== */
+
+/* Farm Animations */
+@keyframes duckWaddle {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-4px) rotate(-4deg);
+  }
+  75% {
+    transform: translateY(-2px) rotate(4deg);
+  }
+}
+
+@keyframes duckFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(2deg);
+  }
+}
+
+@keyframes duckJump {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-20px) scale(1.15) rotate(-6deg);
+  }
+  70% {
+    transform: translateY(-8px) scale(1.05) rotate(4deg);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes waterRipple {
+  0% {
+    r: 10;
+    opacity: 0.8;
+  }
+  100% {
+    r: 45;
+    opacity: 0;
+  }
+}
+
+@keyframes smokeRise {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-16px) translateX(4px) scale(1.1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-34px) translateX(8px) scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes cogSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes signalPulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes speechBubblePop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.8);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -4px) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes fireflyGlow {
+  0%, 100% {
+    opacity: 0.2;
+    transform: translate(0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(6px, -8px);
+  }
+}
+
+@keyframes grainFall {
+  0% {
+    opacity: 1;
+    transform: translateY(-40px) scale(0.6);
+  }
+  80% {
+    transform: translateY(0) scale(1.1);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes floatHeart {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-28px) scale(1.2);
+  }
+}
+
+.farm-station-card {
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+}
+
+.farm-station-card:hover {
+  transform: translateY(-6px);
+}
+
+.farm-station-active {
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.35);
+  border-color: #38bdf8 !important;
+}
+
+.duck-clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.duck-clickable:hover {
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.8));
+}
+
+.speech-bubble {
+  animation: speechBubblePop 0.25s ease-out forwards;
+}
+
+/* Farm Mode Day vs Night */
+.farm-day {
+  background: linear-gradient(180deg, #1e3a5f 0%, #173852 30%, #0d2840 60%, #0c2033 100%);
+}
+
+.farm-night {
+  background: linear-gradient(180deg, #060b14 0%, #0a1122 40%, #0a182c 80%, #091322 100%);
+}
+
