@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { Billboard, RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   STATIONS,
@@ -13,7 +13,7 @@ import {
   type StationKey,
 } from './stations';
 import { input, nav } from './controls';
-import { gameManager, type GameItem, type FloatingText } from './gameState';
+import { Duck } from './DuckModel';
 import styles from './DuckHouse.module.css';
 
 export interface HouseSceneProps {
@@ -21,7 +21,10 @@ export interface HouseSceneProps {
   nearby: StationKey | null;
   onNearbyChange: (key: StationKey | null) => void;
   onArrive: (key: StationKey) => void;
-  onStartMiniGame?: () => void;
+  onOpenGardenGame?: () => void;
+  onNearDoorChange?: (near: boolean) => void;
+  openStationKey?: StationKey | null;
+  onCloseStation?: () => void;
 }
 
 type V3 = [number, number, number];
@@ -37,6 +40,51 @@ function lerpAngle(a: number, b: number, t: number) {
   if (d < -Math.PI) d += Math.PI * 2;
   return a + d * t;
 }
+
+interface StationCameraPreset {
+  pos: [number, number, number];
+  look: [number, number, number];
+  openPos: [number, number, number];
+  openLook: [number, number, number];
+}
+
+const STATION_CAMERAS: Record<StationKey, StationCameraPreset> = {
+  overview: {
+    // Góc 01 · Phòng khách & Sofa (x=-4.5, z=-3.8)
+    pos: [-4.2, 3.8, 0.4],
+    look: [-4.5, 1.2, -3.2],
+    openPos: [-2.6, 3.8, 0.8],
+    openLook: [-3.8, 1.2, -3.0],
+  },
+  experience: {
+    // Góc 02 · Xưởng in bao bì (x=-6.0, z=1.8)
+    pos: [-3.8, 3.6, 5.4],
+    look: [-5.8, 1.2, 2.0],
+    openPos: [-2.4, 3.5, 5.4],
+    openLook: [-5.0, 1.2, 2.0],
+  },
+  skills: {
+    // Góc 03 · Bàn lab công nghệ & Màn hình code (x=4.8, z=-4.7)
+    pos: [3.8, 3.6, -1.0],
+    look: [5.0, 1.4, -4.4],
+    openPos: [5.2, 3.6, -0.8],
+    openLook: [4.4, 1.4, -4.4],
+  },
+  projects: {
+    // Góc 04 · Kệ sách dự án (x=6.8, z=1.8)
+    pos: [3.8, 3.8, 5.2],
+    look: [6.5, 1.6, 1.8],
+    openPos: [5.0, 3.8, 5.2],
+    openLook: [5.8, 1.6, 1.8],
+  },
+  contact: {
+    // Góc 05 · Hòm thư & Cửa ra vào (x=1.5, z=-5.2)
+    pos: [1.2, 3.2, -1.6],
+    look: [1.4, 1.4, -5.0],
+    openPos: [2.4, 3.2, -1.6],
+    openLook: [1.2, 1.4, -5.0],
+  },
+};
 
 const ALL_COLLIDERS: [number, number, number][] = [
   ...STATIONS.map((s) => s.collider),
@@ -84,9 +132,18 @@ function Box({
   roughness = 0.8,
   metalness = 0,
 }: BoxProps) {
+  // Bevelled edges catch highlights and kill the hard "lego block" look
+  const radius = Math.min(0.04, Math.min(size[0], size[1], size[2]) * 0.3);
   return (
-    <mesh position={position} rotation={rotation} castShadow receiveShadow>
-      <boxGeometry args={size} />
+    <RoundedBox
+      args={size}
+      radius={radius}
+      smoothness={3}
+      position={position}
+      rotation={rotation}
+      castShadow
+      receiveShadow
+    >
       <meshStandardMaterial
         color={color}
         emissive={emissive ?? '#000000'}
@@ -94,7 +151,7 @@ function Box({
         roughness={roughness}
         metalness={metalness}
       />
-    </mesh>
+    </RoundedBox>
   );
 }
 
@@ -125,145 +182,8 @@ function Cyl({ position, args, color, rotation, emissive, emissiveIntensity = 0 
 /* The Duck                                                            */
 /* ------------------------------------------------------------------ */
 
-const DUCK_YELLOW = '#ffd23f';
-const DUCK_WING = '#f4b400';
-const BEAK = '#ff8c1a';
-
-function Duck({ motion }: { motion: React.RefObject<{ moving: boolean }> }) {
-  const inner = useRef<THREE.Group>(null);
-  const head = useRef<THREE.Group>(null);
-  const lowerBeak = useRef<THREE.Group>(null);
-  const wingL = useRef<THREE.Mesh>(null);
-  const wingR = useRef<THREE.Mesh>(null);
-  const footL = useRef<THREE.Group>(null);
-  const footR = useRef<THREE.Group>(null);
-  const phase = useRef(0);
-
-  useFrame((state, dt) => {
-    const t = state.clock.elapsedTime;
-    const moving = motion.current?.moving ?? false;
-    const q = performance.now() / 1000 - input.quackAt;
-    const quacking = q >= 0 && q < 0.5;
-
-    if (moving) phase.current += dt * 14;
-
-    if (inner.current) {
-      const jump = quacking ? Math.sin((q / 0.5) * Math.PI) * 0.5 : 0;
-      const bob = moving ? Math.abs(Math.sin(phase.current)) * 0.07 : Math.sin(t * 2) * 0.015;
-      inner.current.position.y = jump + bob;
-      const targetRoll = moving ? Math.sin(phase.current) * 0.14 : 0;
-      inner.current.rotation.z = THREE.MathUtils.lerp(inner.current.rotation.z, targetRoll, 0.3);
-    }
-    if (head.current) {
-      const look = moving ? 0 : Math.sin(t * 0.7) * 0.35;
-      head.current.rotation.y = THREE.MathUtils.lerp(head.current.rotation.y, look, 0.08);
-      head.current.rotation.x = quacking ? -0.25 : THREE.MathUtils.lerp(head.current.rotation.x, 0, 0.15);
-    }
-    if (lowerBeak.current) {
-      const open = quacking ? 0.35 + Math.abs(Math.sin(q * 30)) * 0.25 : 0;
-      lowerBeak.current.rotation.x = THREE.MathUtils.lerp(lowerBeak.current.rotation.x, open, 0.5);
-    }
-    const flap = quacking ? Math.sin(q * 40) * 0.8 : moving ? Math.sin(phase.current * 2) * 0.12 : 0;
-    if (wingL.current) wingL.current.rotation.z = 0.15 + Math.abs(flap);
-    if (wingR.current) wingR.current.rotation.z = -0.15 - Math.abs(flap);
-    const step = moving ? Math.sin(phase.current) * 0.7 : 0;
-    if (footL.current) footL.current.rotation.x = step;
-    if (footR.current) footR.current.rotation.x = -step;
-  });
-
-  return (
-    <group ref={inner} scale={0.95}>
-      {/* Body */}
-      <mesh position={[0, 0.5, 0]} scale={[1, 0.85, 1.2]} castShadow>
-        <sphereGeometry args={[0.42, 32, 32]} />
-        <meshStandardMaterial color={DUCK_YELLOW} roughness={0.55} />
-      </mesh>
-      {/* Tail */}
-      <mesh position={[0, 0.64, -0.5]} rotation={[-1.1, 0, 0]} castShadow>
-        <coneGeometry args={[0.15, 0.32, 16]} />
-        <meshStandardMaterial color={DUCK_YELLOW} roughness={0.55} />
-      </mesh>
-      {/* Wings */}
-      <mesh ref={wingL} position={[0.38, 0.55, -0.02]} scale={[0.35, 0.7, 1.1]} castShadow>
-        <sphereGeometry args={[0.24, 20, 20]} />
-        <meshStandardMaterial color={DUCK_WING} roughness={0.6} />
-      </mesh>
-      <mesh ref={wingR} position={[-0.38, 0.55, -0.02]} scale={[0.35, 0.7, 1.1]} castShadow>
-        <sphereGeometry args={[0.24, 20, 20]} />
-        <meshStandardMaterial color={DUCK_WING} roughness={0.6} />
-      </mesh>
-
-      {/* Head */}
-      <group ref={head} position={[0, 0.98, 0.3]}>
-        <mesh castShadow>
-          <sphereGeometry args={[0.3, 32, 32]} />
-          <meshStandardMaterial color={DUCK_YELLOW} roughness={0.55} />
-        </mesh>
-        {/* Eyes */}
-        {[0.13, -0.13].map((x) => (
-          <group key={x} position={[x, 0.07, 0.24]}>
-            <mesh>
-              <sphereGeometry args={[0.055, 16, 16]} />
-              <meshStandardMaterial color="#1a1a1a" roughness={0.2} />
-            </mesh>
-            <mesh position={[0.015, 0.02, 0.045]}>
-              <sphereGeometry args={[0.018, 8, 8]} />
-              <meshBasicMaterial color="#ffffff" />
-            </mesh>
-          </group>
-        ))}
-        {/* Cheeks */}
-        {[0.2, -0.2].map((x) => (
-          <mesh key={x} position={[x, -0.05, 0.19]}>
-            <sphereGeometry args={[0.05, 12, 12]} />
-            <meshStandardMaterial color="#ff9b85" roughness={0.9} />
-          </mesh>
-        ))}
-        {/* Beak */}
-        <mesh position={[0, -0.04, 0.33]} castShadow>
-          <boxGeometry args={[0.26, 0.07, 0.24]} />
-          <meshStandardMaterial color={BEAK} roughness={0.5} />
-        </mesh>
-        <group ref={lowerBeak} position={[0, -0.08, 0.23]}>
-          <mesh position={[0, 0, 0.09]}>
-            <boxGeometry args={[0.22, 0.05, 0.2]} />
-            <meshStandardMaterial color="#e86f00" roughness={0.5} />
-          </mesh>
-        </group>
-        {/* Dev cap */}
-        <mesh position={[0, 0.06, 0]} castShadow>
-          <sphereGeometry args={[0.31, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.3]} />
-          <meshStandardMaterial color="#2563eb" roughness={0.6} />
-        </mesh>
-        <mesh position={[0, 0.13, 0.28]} rotation={[0.25, 0, 0]} castShadow>
-          <boxGeometry args={[0.38, 0.03, 0.26]} />
-          <meshStandardMaterial color="#1e40af" roughness={0.6} />
-        </mesh>
-        <mesh position={[0, 0.37, 0]}>
-          <sphereGeometry args={[0.045, 12, 12]} />
-          <meshStandardMaterial color="#facc15" />
-        </mesh>
-      </group>
-
-      {/* Feet */}
-      {[
-        { x: 0.15, ref: footL },
-        { x: -0.15, ref: footR },
-      ].map(({ x, ref }) => (
-        <group key={x} ref={ref} position={[x, 0.2, 0.02]}>
-          <mesh position={[0, -0.09, 0]}>
-            <cylinderGeometry args={[0.035, 0.035, 0.18, 8]} />
-            <meshStandardMaterial color={BEAK} />
-          </mesh>
-          <mesh position={[0, -0.18, 0.07]} castShadow>
-            <boxGeometry args={[0.18, 0.04, 0.26]} />
-            <meshStandardMaterial color={BEAK} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-}
+const DUCK_YELLOW = '#ffc62e';
+const BEAK = '#ff7a1a';
 
 /* ------------------------------------------------------------------ */
 /* Room                                                                */
@@ -303,23 +223,209 @@ function WindowFrame({ x }: { x: number }) {
   );
 }
 
-function Plant({ position }: { position: V3 }) {
+function RealisticPlant({
+  position,
+  rotation = [0, 0, 0],
+}: {
+  position: V3;
+  rotation?: V3;
+}) {
+  const foliageRef = useRef<THREE.Group>(null);
+
+  // 3D Plump Succulent Leaf Geometry matching the reference image
+  const { bladeGeom, rimGeom } = useMemo(() => {
+    // 1. Paddle / spoon shape
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    shape.bezierCurveTo(-0.05, 0.12, -0.19, 0.32, -0.21, 0.52);
+    shape.bezierCurveTo(-0.23, 0.72, -0.12, 0.88, 0, 0.98); // tip
+    shape.bezierCurveTo(0.12, 0.88, 0.23, 0.72, 0.21, 0.52);
+    shape.bezierCurveTo(0.19, 0.32, 0.05, 0.12, 0, 0);
+
+    // Thick bevel for plump 3D succulent volume
+    const bladeGeom = new THREE.ExtrudeGeometry(shape, {
+      steps: 1,
+      depth: 0.02,
+      bevelEnabled: true,
+      bevelThickness: 0.022,
+      bevelSize: 0.018,
+      bevelSegments: 4,
+    });
+    bladeGeom.translate(0, 0, -0.026);
+
+    // Apply natural downward arch and V-midrib crease
+    const pos = bladeGeom.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      const ny = Math.max(0, Math.min(1, y / 0.98));
+      const arch = -Math.pow(ny, 1.8) * 0.18;
+      const crease = Math.abs(x) * 0.08;
+      pos.setZ(i, z + arch + crease);
+    }
+    bladeGeom.computeVertexNormals();
+    bladeGeom.computeBoundingSphere();
+
+    // 2. Pale-yellow/lime border edge geometry
+    const rimShape = new THREE.Shape();
+    rimShape.moveTo(0, 0);
+    rimShape.bezierCurveTo(-0.055, 0.12, -0.205, 0.32, -0.225, 0.52);
+    rimShape.bezierCurveTo(-0.245, 0.72, -0.13, 0.89, 0, 0.995);
+    rimShape.bezierCurveTo(0.13, 0.89, 0.245, 0.72, 0.225, 0.52);
+    rimShape.bezierCurveTo(0.205, 0.32, 0.055, 0.12, 0, 0);
+
+    const rimGeom = new THREE.ExtrudeGeometry(rimShape, {
+      steps: 1,
+      depth: 0.024,
+      bevelEnabled: true,
+      bevelThickness: 0.024,
+      bevelSize: 0.02,
+      bevelSegments: 3,
+    });
+    rimGeom.translate(0, 0, -0.03);
+
+    const rpos = rimGeom.attributes.position;
+    for (let i = 0; i < rpos.count; i++) {
+      const x = rpos.getX(i);
+      const y = rpos.getY(i);
+      const z = rpos.getZ(i);
+      const ny = Math.max(0, Math.min(1, y / 0.995));
+      const arch = -Math.pow(ny, 1.8) * 0.18;
+      const crease = Math.abs(x) * 0.08;
+      rpos.setZ(i, z + arch + crease);
+    }
+    rimGeom.computeVertexNormals();
+    rimGeom.computeBoundingSphere();
+
+    return { bladeGeom, rimGeom };
+  }, []);
+
+  useFrame(({ clock }) => {
+    if (foliageRef.current) {
+      const t = clock.elapsedTime;
+      foliageRef.current.children.forEach((c, idx) => {
+        c.rotation.z = Math.sin(t * 1.5 + idx * 0.8) * 0.015;
+        c.rotation.x = Math.cos(t * 1.2 + idx * 0.9) * 0.01;
+      });
+    }
+  });
+
+  // Arrangement of 8 leaves matching the reference image
+  const leaves = useMemo(
+    () => [
+      { rotY: 0, pitch: 0.16, stemLen: 0.44, scale: 1.15 }, // Top center upright
+      { rotY: -0.65, pitch: 0.42, stemLen: 0.38, scale: 1.05 }, // Upper left
+      { rotY: 0.65, pitch: 0.42, stemLen: 0.38, scale: 1.05 }, // Upper right
+      { rotY: -1.25, pitch: 0.68, stemLen: 0.3, scale: 1.0 }, // Mid left
+      { rotY: 1.25, pitch: 0.68, stemLen: 0.3, scale: 1.0 }, // Mid right
+      { rotY: -0.45, pitch: 1.05, stemLen: 0.2, scale: 0.95 }, // Front left drooping
+      { rotY: 0.45, pitch: 1.05, stemLen: 0.2, scale: 0.95 }, // Front right drooping
+      { rotY: Math.PI, pitch: 0.48, stemLen: 0.36, scale: 0.98 }, // Back center
+    ],
+    []
+  );
+
   return (
-    <group position={position}>
-      <Cyl position={[0, 0.3, 0]} args={[0.35, 0.26, 0.6]} color="#c2410c" />
-      <mesh position={[0, 0.95, 0]} castShadow>
-        <sphereGeometry args={[0.45, 16, 16]} />
-        <meshStandardMaterial color="#3a7d44" roughness={0.9} />
+    <group position={position} rotation={rotation}>
+      {/* Peach terracotta flower pot matching reference image */}
+      {/* Tapered lower body */}
+      <Cyl position={[0, 0.25, 0]} args={[0.38, 0.29, 0.5, 32]} color="#ea9377" />
+      {/* Rounded bottom torus */}
+      <mesh position={[0, 0.03, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.27, 0.025, 12, 32]} />
+        <meshStandardMaterial color="#ea9377" roughness={0.7} />
       </mesh>
-      <mesh position={[0.25, 1.3, 0.1]} castShadow>
-        <sphereGeometry args={[0.3, 16, 16]} />
-        <meshStandardMaterial color="#4f9d5a" roughness={0.9} />
+      {/* Top collar / rim */}
+      <Cyl position={[0, 0.55, 0]} args={[0.42, 0.42, 0.14, 32]} color="#ea9377" />
+      {/* Rolled top rim rounded torus */}
+      <mesh position={[0, 0.62, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.4, 0.02, 12, 32]} />
+        <meshStandardMaterial color="#ea9377" roughness={0.7} />
       </mesh>
-      <mesh position={[-0.2, 1.35, -0.1]} castShadow>
-        <sphereGeometry args={[0.28, 16, 16]} />
-        <meshStandardMaterial color="#5cb26b" roughness={0.9} />
-      </mesh>
+      {/* Dark rich potting soil */}
+      <Cyl position={[0, 0.54, 0]} args={[0.38, 0.38, 0.04, 32]} color="#241711" />
+
+      {/* Foliage group */}
+      <group ref={foliageRef} position={[0, 0.55, 0]}>
+        {leaves.map((lf, i) => (
+          <group key={i} rotation={[0, lf.rotY, 0]}>
+            <group rotation={[lf.pitch, 0, 0]}>
+              {/* Fleshy round succulent stalk */}
+              <mesh position={[0, lf.stemLen / 2, 0]} castShadow>
+                <cylinderGeometry args={[0.024, 0.036, lf.stemLen, 16]} />
+                <meshStandardMaterial color="#84cc16" roughness={0.45} />
+              </mesh>
+              {/* Plump succulent leaf blade with two-tone creamy edge trim */}
+              <group position={[0, lf.stemLen, 0]} rotation={[-0.15, 0, 0]} scale={lf.scale}>
+                {/* Pale lime-yellow border trim */}
+                <mesh geometry={rimGeom} castShadow receiveShadow>
+                  <meshStandardMaterial
+                    color="#d9f99d"
+                    roughness={0.45}
+                    side={THREE.DoubleSide}
+                  />
+                </mesh>
+                {/* Apple green succulent leaf face */}
+                <mesh position={[0, 0, 0.003]} geometry={bladeGeom} castShadow receiveShadow>
+                  <meshStandardMaterial
+                    color="#84cc16"
+                    roughness={0.4}
+                    metalness={0.04}
+                    side={THREE.DoubleSide}
+                  />
+                </mesh>
+              </group>
+            </group>
+          </group>
+        ))}
+      </group>
     </group>
+  );
+}
+
+function WallSign() {
+  const tex = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, 512, 128);
+
+    const x = 16, y = 16, w = 480, h = 96, r = 48;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+
+    ctx.fillStyle = 'rgba(43, 26, 14, 0.94)';
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#d97706';
+    ctx.stroke();
+
+    ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#fef3c7';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🦆 Nhà của Vịt Vũ', 256, 64);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }, []);
+
+  if (!tex) return null;
+  return (
+    <mesh position={[0, 3.45, -5.92]}>
+      <planeGeometry args={[2.5, 0.62]} />
+      <meshBasicMaterial map={tex} transparent />
+    </mesh>
   );
 }
 
@@ -371,18 +477,10 @@ function Room({ onFloorClick }: { onFloorClick: (e: ThreeEvent<MouseEvent>) => v
       <WindowFrame x={3.0} />
 
       {/* Wall sign */}
-      <Html
-        position={[0, 3.45, -5.95]}
-        transform
-        distanceFactor={5}
-        zIndexRange={[5, 0]}
-        style={{ pointerEvents: 'none' }}
-      >
-        <div className={styles.wallSign}>🦆 Nhà của Vịt Vũ</div>
-      </Html>
+      <WallSign />
 
-      <Plant position={[-7.1, 0, 4.8]} />
-      <Plant position={[7.1, 0, 4.8]} />
+      <RealisticPlant position={[-7.1, 0, 4.8]} rotation={[0, 0.35, 0]} />
+      <RealisticPlant position={[7.1, 0, 4.8]} rotation={[0, -0.25, 0]} />
     </group>
   );
 }
@@ -603,66 +701,198 @@ function TechLab() {
   );
 }
 
-function ErpShelf() {
-  const boxes: { pos: V3; size: V3; color: string }[] = [
-    { pos: [7.4, 0.32, 0.9], size: [0.55, 0.38, 0.6], color: '#c9a26b' },
-    { pos: [7.4, 0.32, 1.6], size: [0.55, 0.38, 0.55], color: '#34d399' },
-    { pos: [7.4, 0.3, 2.4], size: [0.55, 0.34, 0.6], color: '#b88c55' },
-    { pos: [7.4, 1.16, 1.0], size: [0.55, 0.36, 0.7], color: '#60a5fa' },
-    { pos: [7.4, 1.16, 2.1], size: [0.55, 0.4, 0.8], color: '#c9a26b' },
-    { pos: [7.4, 2.0, 0.85], size: [0.55, 0.34, 0.5], color: '#f472b6' },
-    { pos: [7.4, 2.0, 1.6], size: [0.55, 0.38, 0.6], color: '#d4b07a' },
-    { pos: [7.4, 2.0, 2.4], size: [0.55, 0.3, 0.5], color: '#fbbf24' },
-  ];
-  const screen = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
-    if (!screen.current) return;
-    screen.current.children.forEach((c, i) => {
-      c.scale.y = 0.4 + Math.abs(Math.sin(clock.elapsedTime * 1.5 + i)) * 0.9;
-    });
-  });
+interface BookData {
+  pos: V3;
+  size: V3; // [depth in X, height in Y, spine thickness in Z]
+  cover: string;
+  foil?: string;
+  tiltZ?: number;
+}
+
+function Book({ pos, size, cover, foil, tiltZ = 0 }: BookData) {
+  const [dx, dy, dz] = size;
   return (
-    <group>
-      {/* Shelf frame */}
-      <Box position={[7.45, 1.3, 0.45]} size={[0.7, 2.6, 0.08]} color="#6d4c41" />
-      <Box position={[7.45, 1.3, 2.95]} size={[0.7, 2.6, 0.08]} color="#6d4c41" />
-      {[0.1, 0.95, 1.8, 2.6].map((y) => (
-        <Box key={y} position={[7.45, y, 1.7]} size={[0.7, 0.06, 2.5]} color="#795548" />
-      ))}
-      {boxes.map((b, i) => (
-        <Box key={i} position={b.pos} size={b.size} color={b.color} />
-      ))}
-      {/* Barcode stickers */}
-      {boxes.slice(0, 5).map((b, i) => (
-        <mesh key={`bc${i}`} position={[b.pos[0] - b.size[0] / 2 - 0.005, b.pos[1], b.pos[2]]} rotation={[0, -Math.PI / 2, 0]}>
-          <planeGeometry args={[0.22, 0.12]} />
-          <meshBasicMaterial color="#ffffff" />
+    <group position={pos} rotation={[tiltZ, 0, 0]}>
+      {/* Book Cover */}
+      <Box position={[0, 0, 0]} size={[dx, dy, dz]} color={cover} roughness={0.65} />
+      {/* Pages core (recessed slightly from the front spine at -X) */}
+      <Box
+        position={[0.02, 0, 0]}
+        size={[dx - 0.03, dy - 0.03, dz - 0.015]}
+        color="#fffbeb"
+        roughness={0.9}
+      />
+      {/* Spine Foil Band */}
+      {foil && (
+        <mesh position={[-dx / 2 - 0.002, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[dz * 0.88, dy * 0.18]} />
+          <meshStandardMaterial color={foil} metalness={0.8} roughness={0.2} />
         </mesh>
-      ))}
-      {/* ERP kiosk */}
-      <Cyl position={[6.3, 0.03, 3.7]} args={[0.3, 0.3, 0.06]} color="#1f2937" />
-      <Cyl position={[6.3, 0.6, 3.7]} args={[0.05, 0.05, 1.1]} color="#374151" />
-      <group position={[6.3, 1.3, 3.7]} rotation={[0, -Math.PI / 2.4, 0]}>
-        <Box position={[0, 0, 0]} size={[0.85, 0.6, 0.06]} color="#111827" />
-        <mesh position={[0, 0, 0.035]}>
-          <planeGeometry args={[0.76, 0.5]} />
-          <meshStandardMaterial color="#022c22" emissive="#022c22" />
-        </mesh>
-        <group ref={screen} position={[0, -0.18, 0.04]}>
-          {[-0.27, -0.13, 0.01, 0.15, 0.29].map((x) => (
-            <mesh key={x} position={[x, 0.12, 0]}>
-              <planeGeometry args={[0.08, 0.24]} />
-              <meshStandardMaterial color="#34d399" emissive="#10b981" emissiveIntensity={1.5} />
-            </mesh>
-          ))}
-        </group>
-      </group>
-      <pointLight position={[6, 1.4, 3.3]} intensity={2.5} distance={3} color="#34d399" />
+      )}
     </group>
   );
 }
 
-function DoorMailbox() {
+function ProjectBookshelf() {
+  return (
+    <group>
+      {/* --- GRAND ARCHITECTURAL WALNUT BOOKCASE --- */}
+      {/* Backing panel */}
+      <Box position={[7.78, 1.6, 1.7]} size={[0.06, 3.12, 2.66]} color="#2d1d16" roughness={0.9} />
+      {/* Vertical Uprights */}
+      <Box position={[7.46, 1.6, 0.4]} size={[0.62, 3.12, 0.08]} color="#3e2723" roughness={0.7} />
+      <Box position={[7.46, 1.6, 3.0]} size={[0.62, 3.12, 0.08]} color="#3e2723" roughness={0.7} />
+      {/* Center Divider Upright */}
+      <Box position={[7.46, 1.6, 1.7]} size={[0.6, 3.12, 0.06]} color="#4e342e" roughness={0.7} />
+      {/* Base Plinth */}
+      <Box position={[7.46, 0.08, 1.7]} size={[0.66, 0.16, 2.74]} color="#2d1d16" roughness={0.7} />
+      {/* Top Crown Molding / Cornice */}
+      <Box position={[7.46, 3.18, 1.7]} size={[0.72, 0.12, 2.82]} color="#5d4037" roughness={0.6} />
+
+      {/* Horizontal Shelves (Bottom, Tier 1, Tier 2, Tier 3, Top) */}
+      {[0.18, 0.9, 1.62, 2.34, 3.06].map((y) => (
+        <Box key={y} position={[7.46, y, 1.7]} size={[0.62, 0.05, 2.6]} color="#4e342e" roughness={0.7} />
+      ))}
+
+      {/* --- SHELF 1 (Bottom, y: 0.22 to 0.88) --- */}
+      {/* Left Bay: Heavy Project Archive Binders & System Folios */}
+      <Book pos={[7.46, 0.54, 0.52]} size={[0.42, 0.48, 0.11]} cover="#1e3a8a" foil="#fbbf24" />
+      <Book pos={[7.46, 0.54, 0.65]} size={[0.42, 0.48, 0.11]} cover="#14532d" foil="#facc15" />
+      <Book pos={[7.46, 0.54, 0.78]} size={[0.42, 0.48, 0.11]} cover="#831843" foil="#e2e8f0" />
+      <Book pos={[7.46, 0.54, 0.91]} size={[0.42, 0.48, 0.11]} cover="#1e293b" foil="#fbbf24" />
+      {/* Binder Spine Label Tags */}
+      {[0.52, 0.65, 0.78, 0.91].map((z) => (
+        <mesh key={z} position={[7.24, 0.58, z]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[0.07, 0.18]} />
+          <meshBasicMaterial color="#ffffff" />
+        </mesh>
+      ))}
+      {/* Horizontal Portfolio Folios Stack */}
+      <Book pos={[7.46, 0.25, 1.25]} size={[0.42, 0.08, 0.3]} cover="#b45309" />
+      <Book pos={[7.46, 0.33, 1.25]} size={[0.4, 0.07, 0.28]} cover="#0369a1" />
+      <Book pos={[7.46, 0.4, 1.25]} size={[0.38, 0.06, 0.26]} cover="#475569" foil="#facc15" />
+      {/* Heavy Marble Bookend */}
+      <Box position={[7.46, 0.36, 1.55]} size={[0.3, 0.26, 0.1]} color="#0f172a" roughness={0.3} metalness={0.2} />
+
+      {/* Right Bay: Hardware / Component Storage Boxes */}
+      <Box position={[7.46, 0.45, 2.05]} size={[0.48, 0.38, 0.5]} color="#334155" roughness={0.7} />
+      <Box position={[7.21, 0.45, 2.05]} size={[0.02, 0.08, 0.16]} color="#fbbf24" metalness={0.8} roughness={0.2} />
+      <Box position={[7.46, 0.45, 2.65]} size={[0.48, 0.38, 0.5]} color="#475569" roughness={0.7} />
+      <Box position={[7.21, 0.45, 2.65]} size={[0.02, 0.08, 0.16]} color="#fbbf24" metalness={0.8} roughness={0.2} />
+
+      {/* --- SHELF 2 (Mid-Lower, y: 0.94 to 1.60) --- */}
+      {/* Left Bay: Software Engineering Library */}
+      <Book pos={[7.46, 1.24, 0.48]} size={[0.36, 0.38, 0.07]} cover="#1e40af" foil="#fbbf24" />
+      <Book pos={[7.46, 1.24, 0.56]} size={[0.36, 0.38, 0.07]} cover="#0f766e" />
+      <Book pos={[7.46, 1.22, 0.64]} size={[0.35, 0.35, 0.06]} cover="#b91c1c" foil="#fbbf24" />
+      <Book pos={[7.46, 1.26, 0.72]} size={[0.37, 0.42, 0.08]} cover="#581c87" />
+      <Book pos={[7.46, 1.22, 0.8]} size={[0.35, 0.36, 0.06]} cover="#c2410c" />
+      <Book pos={[7.46, 1.24, 0.88]} size={[0.36, 0.39, 0.07]} cover="#15803d" foil="#facc15" />
+      <Book pos={[7.46, 1.22, 0.95]} size={[0.35, 0.35, 0.05]} cover="#0369a1" />
+      {/* 2 Leaning Books */}
+      <Book pos={[7.46, 1.22, 1.05]} size={[0.35, 0.36, 0.06]} cover="#d97706" tiltZ={0.22} />
+      <Book pos={[7.46, 1.2, 1.13]} size={[0.34, 0.34, 0.06]} cover="#4338ca" tiltZ={0.22} />
+      {/* Geometric Marble Bookend */}
+      <Box position={[7.46, 1.1, 1.3]} size={[0.26, 0.22, 0.12]} color="#e2e8f0" roughness={0.2} />
+
+      {/* Right Bay: Enterprise Systems & Cloud Stack */}
+      <Book pos={[7.46, 1.26, 1.82]} size={[0.38, 0.42, 0.09]} cover="#065f46" foil="#fbbf24" />
+      <Book pos={[7.46, 1.24, 1.93]} size={[0.36, 0.38, 0.08]} cover="#0284c7" />
+      <Book pos={[7.46, 1.22, 2.03]} size={[0.35, 0.36, 0.07]} cover="#7c2d12" foil="#facc15" />
+      <Book pos={[7.46, 1.26, 2.13]} size={[0.37, 0.41, 0.08]} cover="#374151" />
+      <Book pos={[7.46, 1.24, 2.23]} size={[0.36, 0.38, 0.07]} cover="#1e1b4b" />
+      {/* Horizontal Stack with Brass Clock */}
+      <Book pos={[7.46, 0.98, 2.6]} size={[0.36, 0.07, 0.26]} cover="#78350f" />
+      <Book pos={[7.46, 1.05, 2.6]} size={[0.34, 0.06, 0.24]} cover="#047857" />
+      {/* Desk Clock on Stack */}
+      <Cyl position={[7.46, 1.18, 2.6]} args={[0.07, 0.07, 0.05, 16]} color="#fbbf24" rotation={[Math.PI / 2, 0, 0]} />
+
+      {/* --- SHELF 3 (Mid-Upper, y: 1.66 to 2.32) --- */}
+      {/* Left Bay: Golden Trophy of Project Excellence */}
+      <group position={[7.46, 1.66, 1.05]}>
+        <Box position={[0, 0.04, 0]} size={[0.22, 0.06, 0.22]} color="#0f172a" metalness={0.5} roughness={0.3} />
+        <Box position={[0, 0.09, 0]} size={[0.16, 0.04, 0.16]} color="#1e293b" metalness={0.5} roughness={0.3} />
+        <Cyl position={[0, 0.18, 0]} args={[0.02, 0.04, 0.14, 16]} color="#fbbf24" emissive="#f59e0b" emissiveIntensity={0.2} />
+        <Cyl position={[0, 0.3, 0]} args={[0.09, 0.04, 0.15, 16]} color="#fbbf24" emissive="#f59e0b" emissiveIntensity={0.3} />
+        <mesh position={[0, 0.3, 0.09]}>
+          <torusGeometry args={[0.05, 0.012, 8, 16]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} />
+        </mesh>
+        <mesh position={[0, 0.3, -0.09]}>
+          <torusGeometry args={[0.05, 0.012, 8, 16]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} />
+        </mesh>
+        <mesh position={[0, 0.41, 0]}>
+          <octahedronGeometry args={[0.04]} />
+          <meshStandardMaterial color="#fef08a" emissive="#fbbf24" emissiveIntensity={0.8} />
+        </mesh>
+      </group>
+      {/* Flanking Books on Left Shelf 3 */}
+      <Book pos={[7.46, 1.9, 0.55]} size={[0.34, 0.36, 0.08]} cover="#dc2626" foil="#fbbf24" />
+      <Book pos={[7.46, 1.9, 0.65]} size={[0.33, 0.35, 0.07]} cover="#2563eb" />
+      <Book pos={[7.46, 1.88, 1.45]} size={[0.34, 0.34, 0.07]} cover="#059669" />
+      <Book pos={[7.46, 1.88, 1.54]} size={[0.34, 0.35, 0.07]} cover="#7c3aed" foil="#facc15" />
+
+      {/* Right Bay: Modern Web Stack Rainbow Collection */}
+      {[
+        { c: '#4338ca', h: 0.36, z: 1.85 },
+        { c: '#0284c7', h: 0.38, z: 1.94 },
+        { c: '#0d9488', h: 0.35, z: 2.02 },
+        { c: '#16a34a', h: 0.37, z: 2.11 },
+        { c: '#ca8a04', h: 0.34, z: 2.19 },
+        { c: '#ea580c', h: 0.38, z: 2.28 },
+        { c: '#e11d48', h: 0.36, z: 2.37 },
+        { c: '#9333ea', h: 0.39, z: 2.47 },
+      ].map((b, i) => (
+        <Book key={i} pos={[7.46, 1.66 + b.h / 2, b.z]} size={[0.33, b.h, 0.07]} cover={b.c} foil={i % 3 === 0 ? '#fbbf24' : undefined} />
+      ))}
+      {/* Stone Bookend */}
+      <Box position={[7.46, 1.8, 2.65]} size={[0.24, 0.22, 0.12]} color="#334155" roughness={0.4} />
+
+      {/* --- SHELF 4 (Top, y: 2.38 to 3.04) --- */}
+      {/* Left Bay: Framed System Diploma / Excellence Award */}
+      <group position={[7.46, 2.66, 1.05]}>
+        <Box position={[0, 0, 0]} size={[0.04, 0.42, 0.52]} color="#fbbf24" metalness={0.7} roughness={0.3} />
+        <mesh position={[-0.022, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[0.46, 0.36]} />
+          <meshStandardMaterial color="#fefce8" roughness={0.9} />
+        </mesh>
+        <mesh position={[-0.024, -0.09, 0.12]} rotation={[0, -Math.PI / 2, 0]}>
+          <circleGeometry args={[0.04, 16]} />
+          <meshStandardMaterial color="#d97706" emissive="#fbbf24" emissiveIntensity={0.5} />
+        </mesh>
+      </group>
+      <Book pos={[7.46, 2.58, 0.52]} size={[0.3, 0.32, 0.06]} cover="#374151" />
+      <Book pos={[7.46, 2.58, 0.6]} size={[0.3, 0.31, 0.06]} cover="#4b5563" />
+
+      {/* Right Bay: Mini Trailing Succulent / Ivy Potted Plant on Shelf */}
+      <group position={[7.46, 2.44, 2.1]}>
+        <Cyl position={[0, 0.08, 0]} args={[0.1, 0.08, 0.14, 16]} color="#ea580c" />
+        <Cyl position={[0, 0.14, 0]} args={[0.09, 0.09, 0.02, 16]} color="#1c140d" />
+        <mesh position={[-0.06, 0.16, 0]} castShadow>
+          <sphereGeometry args={[0.09, 12, 12]} />
+          <meshStandardMaterial color="#22c55e" roughness={0.4} />
+        </mesh>
+        <mesh position={[-0.14, 0.02, 0.03]} rotation={[0, 0, 0.4]}>
+          <capsuleGeometry args={[0.025, 0.16, 4, 8]} />
+          <meshStandardMaterial color="#16a34a" roughness={0.4} />
+        </mesh>
+        <mesh position={[-0.15, -0.12, 0.05]} rotation={[0, 0, 0.2]}>
+          <capsuleGeometry args={[0.02, 0.14, 4, 8]} />
+          <meshStandardMaterial color="#15803d" roughness={0.4} />
+        </mesh>
+      </group>
+      <Book pos={[7.46, 2.58, 2.5]} size={[0.3, 0.32, 0.06]} cover="#1e3a8a" foil="#fbbf24" />
+      <Book pos={[7.46, 2.58, 2.58]} size={[0.3, 0.31, 0.06]} cover="#0f766e" />
+      <Book pos={[7.46, 2.58, 2.66]} size={[0.3, 0.3, 0.06]} cover="#701a75" />
+
+      {/* Soft warm library illumination */}
+      <pointLight position={[6.8, 3.0, 1.7]} intensity={3.5} distance={4.5} color="#fed7aa" />
+    </group>
+  );
+}
+
+function DoorMailbox({ onOpenGardenGame }: { onOpenGardenGame?: () => void }) {
   const env = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
     if (env.current) {
@@ -670,22 +900,82 @@ function DoorMailbox() {
       env.current.rotation.y = Math.sin(clock.elapsedTime) * 0.5;
     }
   });
+
+  const doorSignTex = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, 512, 128);
+
+    const x = 16, y = 16, w = 480, h = 96, r = 48;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+    ctx.fill();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#38bdf8';
+    ctx.stroke();
+
+    ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#38bdf8';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🚪 Ra Vườn (Game Mario)', 256, 64);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }, []);
+
   return (
     <group>
-      {/* Door */}
-      <Box position={[0, 1.3, -5.97]} size={[1.7, 2.7, 0.1]} color="#5d4037" />
-      <Box position={[0, 1.22, -5.92]} size={[1.4, 2.45, 0.08]} color="#a47148" />
-      <Box position={[0, 1.7, -5.87]} size={[1.1, 0.9, 0.02]} color="#8d5f3a" />
-      <Box position={[0, 0.65, -5.87]} size={[1.1, 0.8, 0.02]} color="#8d5f3a" />
-      <mesh position={[0.5, 1.2, -5.85]}>
-        <sphereGeometry args={[0.06, 16, 16]} />
-        <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} />
-      </mesh>
-      {/* Doormat */}
-      <mesh position={[0, 0.012, -5.3]} rotation-x={-Math.PI / 2} receiveShadow>
-        <planeGeometry args={[1.6, 0.8]} />
-        <meshStandardMaterial color="#a5714b" roughness={1} />
-      </mesh>
+      {/* Interactive Exit Door to Mario Garden Game */}
+      <group
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpenGardenGame?.();
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = '';
+        }}
+      >
+        <Box position={[0, 1.3, -5.97]} size={[1.7, 2.7, 0.1]} color="#5d4037" />
+        <Box position={[0, 1.22, -5.92]} size={[1.4, 2.45, 0.08]} color="#a47148" />
+        <Box position={[0, 1.7, -5.87]} size={[1.1, 0.9, 0.02]} color="#8d5f3a" />
+        <Box position={[0, 0.65, -5.87]} size={[1.1, 0.8, 0.02]} color="#8d5f3a" />
+        <mesh position={[0.5, 1.2, -5.85]}>
+          <sphereGeometry args={[0.06, 16, 16]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} />
+        </mesh>
+        {/* Doormat */}
+        <mesh position={[0, 0.012, -5.3]} rotation-x={-Math.PI / 2} receiveShadow>
+          <planeGeometry args={[1.6, 0.8]} />
+          <meshStandardMaterial color="#a5714b" roughness={1} />
+        </mesh>
+        {/* Doorway Billboard */}
+        {doorSignTex && (
+          <Billboard position={[0, 3.1, -5.85]}>
+            <mesh>
+              <planeGeometry args={[1.8, 0.45]} />
+              <meshBasicMaterial map={doorSignTex} transparent />
+            </mesh>
+          </Billboard>
+        )}
+      </group>
+
       {/* Mailbox */}
       <Cyl position={[1.5, 0.5, -5.2]} args={[0.05, 0.05, 1]} color="#4b5563" />
       <Box position={[1.5, 1.1, -5.2]} size={[0.45, 0.4, 0.7]} color="#e63946" />
@@ -715,7 +1005,7 @@ const FURNITURE: Record<StationKey, React.FC> = {
   overview: LivingRoom,
   experience: PrintWorkshop,
   skills: TechLab,
-  projects: ErpShelf,
+  projects: ProjectBookshelf,
   contact: DoorMailbox,
 };
 
@@ -745,7 +1035,62 @@ function InteractRing({ def, active }: { def: StationDef; active: boolean }) {
   );
 }
 
-function Station({ def, active }: { def: StationDef; active: boolean }) {
+function StationLabel({ def, active }: { def: StationDef; active: boolean }) {
+  const tex = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, 512, 128);
+
+    const x = 20, y = 20, w = 472, h = 88, r = 44;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+
+    ctx.fillStyle = active ? 'rgba(15, 23, 42, 0.96)' : 'rgba(15, 23, 42, 0.85)';
+    ctx.fill();
+    ctx.lineWidth = active ? 8 : 5;
+    ctx.strokeStyle = def.color;
+    ctx.stroke();
+
+    ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = active ? '#ffffff' : '#e2e8f0';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${def.emoji} ${def.label}`, 256, 64);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }, [def.color, def.emoji, def.label, active]);
+
+  if (!tex) return null;
+  return (
+    <Billboard position={def.labelAt}>
+      <mesh>
+        <planeGeometry args={[active ? 1.75 : 1.55, active ? 0.44 : 0.39]} />
+        <meshBasicMaterial map={tex} transparent />
+      </mesh>
+    </Billboard>
+  );
+}
+
+function Station({
+  def,
+  active,
+  onOpenGardenGame,
+}: {
+  def: StationDef;
+  active: boolean;
+  onOpenGardenGame?: () => void;
+}) {
   const Furniture = FURNITURE[def.key];
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -766,190 +1111,14 @@ function Station({ def, active }: { def: StationDef; active: boolean }) {
           document.body.style.cursor = '';
         }}
       >
-        <Furniture />
+        {def.key === 'contact' ? (
+          <DoorMailbox onOpenGardenGame={onOpenGardenGame} />
+        ) : (
+          <Furniture />
+        )}
       </group>
       <InteractRing def={def} active={active} />
-      <Html
-        position={def.labelAt}
-        center
-        distanceFactor={11}
-        zIndexRange={[20, 0]}
-        style={{ pointerEvents: 'none' }}
-      >
-        <div
-          className={`${styles.label} ${active ? styles.labelActive : ''}`}
-          style={{ '--accent': def.color } as React.CSSProperties}
-        >
-          <span>{def.emoji}</span>
-          <span>{def.label}</span>
-        </div>
-      </Html>
-    </group>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Mini Game 3D Meshes & Collectibles                                 */
-/* ------------------------------------------------------------------ */
-
-function CornMesh({ item }: { item: GameItem }) {
-  const grp = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
-    if (grp.current) {
-      grp.current.rotation.y = clock.elapsedTime * 2.8;
-      grp.current.position.y = 0.45 + Math.sin(clock.elapsedTime * 4 + item.x) * 0.08;
-    }
-  });
-
-  return (
-    <group ref={grp} position={[item.x, 0.45, item.z]} scale={item.scale}>
-      <mesh castShadow>
-        <cylinderGeometry args={[0.13, 0.1, 0.4, 16]} />
-        <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={0.65} roughness={0.4} />
-      </mesh>
-      <mesh position={[0, 0.23, 0]}>
-        <sphereGeometry args={[0.12, 16, 16]} />
-        <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={0.65} />
-      </mesh>
-      <mesh position={[-0.08, -0.15, 0]} rotation={[0, 0, 0.35]}>
-        <coneGeometry args={[0.09, 0.32, 8]} />
-        <meshStandardMaterial color="#22c55e" roughness={0.7} />
-      </mesh>
-      <mesh position={[0.08, -0.15, 0]} rotation={[0, 0, -0.35]}>
-        <coneGeometry args={[0.09, 0.32, 8]} />
-        <meshStandardMaterial color="#22c55e" roughness={0.7} />
-      </mesh>
-      <pointLight color="#fbbf24" intensity={2} distance={1.8} />
-    </group>
-  );
-}
-
-function BugMesh({ item }: { item: GameItem }) {
-  const grp = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
-    if (grp.current) {
-      grp.current.rotation.y = Math.sin(clock.elapsedTime * 2 + item.z) * 0.8;
-      grp.current.position.y = 0.3 + Math.abs(Math.sin(clock.elapsedTime * 7 + item.x)) * 0.12;
-    }
-  });
-
-  return (
-    <group ref={grp} position={[item.x, 0.3, item.z]} scale={item.scale}>
-      <mesh castShadow>
-        <sphereGeometry args={[0.2, 16, 16]} />
-        <meshStandardMaterial color="#0284c7" emissive="#38bdf8" emissiveIntensity={0.8} roughness={0.3} metalness={0.2} />
-      </mesh>
-      <mesh position={[0, 0.05, 0.18]}>
-        <sphereGeometry args={[0.12, 12, 12]} />
-        <meshStandardMaterial color="#0369a1" />
-      </mesh>
-      {/* Antennae */}
-      <mesh position={[0.05, 0.2, 0.2]} rotation={[0.4, 0, 0.3]}>
-        <cylinderGeometry args={[0.015, 0.015, 0.16, 6]} />
-        <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={1.5} />
-      </mesh>
-      <mesh position={[-0.05, 0.2, 0.2]} rotation={[0.4, 0, -0.3]}>
-        <cylinderGeometry args={[0.015, 0.015, 0.16, 6]} />
-        <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={1.5} />
-      </mesh>
-      <pointLight color="#38bdf8" intensity={2.5} distance={2} />
-    </group>
-  );
-}
-
-function StarMesh({ item }: { item: GameItem }) {
-  const grp = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
-    if (grp.current) {
-      grp.current.rotation.x = clock.elapsedTime * 2;
-      grp.current.rotation.y = clock.elapsedTime * 2.5;
-      grp.current.position.y = 0.5 + Math.sin(clock.elapsedTime * 4) * 0.12;
-    }
-  });
-
-  return (
-    <group ref={grp} position={[item.x, 0.5, item.z]} scale={item.scale}>
-      <mesh castShadow>
-        <octahedronGeometry args={[0.24, 0]} />
-        <meshStandardMaterial color="#c084fc" emissive="#a855f7" emissiveIntensity={2} roughness={0.2} />
-      </mesh>
-      <pointLight color="#c084fc" intensity={3} distance={2.5} />
-    </group>
-  );
-}
-
-function CoffeeMesh({ item }: { item: GameItem }) {
-  const grp = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
-    if (grp.current) {
-      grp.current.rotation.y = clock.elapsedTime * 1.5;
-      grp.current.position.y = 0.38 + Math.sin(clock.elapsedTime * 3) * 0.06;
-    }
-  });
-
-  return (
-    <group ref={grp} position={[item.x, 0.38, item.z]} scale={item.scale}>
-      <mesh castShadow>
-        <cylinderGeometry args={[0.14, 0.12, 0.26, 16]} />
-        <meshStandardMaterial color="#ef4444" roughness={0.4} />
-      </mesh>
-      <mesh position={[0, 0.11, 0]}>
-        <cylinderGeometry args={[0.12, 0.12, 0.03, 16]} />
-        <meshStandardMaterial color="#fef08a" />
-      </mesh>
-      <mesh position={[0.16, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <torusGeometry args={[0.07, 0.02, 8, 16, Math.PI]} />
-        <meshStandardMaterial color="#ef4444" />
-      </mesh>
-      <pointLight color="#f87171" intensity={1.5} distance={1.5} />
-    </group>
-  );
-}
-
-function ArcadeCabinet({ onStartGame }: { onStartGame: () => void }) {
-  return (
-    <group
-      position={[-6.8, 0, 4.3]}
-      rotation={[0, Math.PI / 4, 0]}
-      onClick={(e) => {
-        e.stopPropagation();
-        onStartGame();
-      }}
-      onPointerOver={(e) => {
-        e.stopPropagation();
-        document.body.style.cursor = 'pointer';
-      }}
-      onPointerOut={() => {
-        document.body.style.cursor = '';
-      }}
-    >
-      <Box position={[0, 0.8, 0]} size={[0.8, 1.6, 0.7]} color="#1e1b4b" metalness={0.2} roughness={0.6} />
-      <Box position={[0, 1.15, 0.12]} size={[0.65, 0.55, 0.1]} color="#0f172a" rotation={[-0.35, 0, 0]} />
-      <mesh position={[0, 1.17, 0.18]} rotation={[-0.35, 0, 0]}>
-        <planeGeometry args={[0.55, 0.42]} />
-        <meshStandardMaterial color="#0284c7" emissive="#38bdf8" emissiveIntensity={1.8} />
-      </mesh>
-      <Box position={[0, 1.65, 0.1]} size={[0.78, 0.22, 0.35]} color="#f59e0b" emissive="#fbbf24" emissiveIntensity={0.6} />
-      <Cyl position={[-0.15, 0.88, 0.28]} args={[0.015, 0.015, 0.12]} color="#ffffff" />
-      <mesh position={[-0.15, 0.95, 0.28]}>
-        <sphereGeometry args={[0.04, 12, 12]} />
-        <meshStandardMaterial color="#ef4444" />
-      </mesh>
-      <Html position={[0, 2.15, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.92)',
-          border: '1.5px solid #fbbf24',
-          color: '#fbbf24',
-          padding: '4px 10px',
-          borderRadius: '999px',
-          fontSize: '11px',
-          fontWeight: 700,
-          whiteSpace: 'nowrap',
-          boxShadow: '0 0 12px rgba(251, 191, 36, 0.4)'
-        }}>
-          🎮 Máy Chơi Mini Game
-        </div>
-      </Html>
+      <StationLabel def={def} active={active} />
     </group>
   );
 }
@@ -958,15 +1127,21 @@ function ArcadeCabinet({ onStartGame }: { onStartGame: () => void }) {
 /* World: lights + room + duck controller + follow camera              */
 /* ------------------------------------------------------------------ */
 
-function World({ paused, nearby, onNearbyChange, onArrive, onStartMiniGame }: HouseSceneProps) {
-  const [, setGameTick] = React.useState(0);
-  React.useEffect(() => {
-    return gameManager.subscribe(() => setGameTick((t) => t + 1));
-  }, []);
+function World({
+  paused,
+  nearby,
+  onNearbyChange,
+  onArrive,
+  onOpenGardenGame,
+  onNearDoorChange,
+  openStationKey,
+  onCloseStation,
+}: HouseSceneProps) {
 
   const duckRef = useRef<THREE.Group>(null);
   const motion = useRef({ moving: false });
   const lastNearby = useRef<StationKey | null>(null);
+  const lastNearDoor = useRef(false);
   const look = useRef(new THREE.Vector3(0, 0.5, 0));
   const tmpPos = useMemo(() => new THREE.Vector3(), []);
   const tmpLook = useMemo(() => new THREE.Vector3(), []);
@@ -974,13 +1149,47 @@ function World({ paused, nearby, onNearbyChange, onArrive, onStartMiniGame }: Ho
   const markerMat = useRef<THREE.MeshBasicMaterial>(null);
   const markerAge = useRef(10);
 
+  // Cuộn chuột để quay về chế độ thường khi đang zoom cận cảnh
+  const manualZoomOut = useRef(false);
+  const lastDuckPos = useRef<[number, number]>([0, 0]);
+  const lastClosestStation = useRef<StationKey | null>(null);
+
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      // Nếu đang cuộn trong nội dung văn bản của bảng sidePanel thì không can thiệp
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('[class*="sidePanel"]')) {
+        return;
+      }
+
+      if (e.deltaY > 0) {
+        // Cuộn chuột xuống (zoom out) -> quay về chế độ thường!
+        if (openStationKey && onCloseStation) {
+          onCloseStation();
+        }
+        manualZoomOut.current = true;
+        if (duckRef.current) {
+          lastDuckPos.current = [duckRef.current.position.x, duckRef.current.position.z];
+        }
+      } else if (e.deltaY < 0) {
+        // Cuộn chuột lên (zoom in) -> cho phép zoom cận cảnh lại
+        manualZoomOut.current = false;
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [openStationKey, onCloseStation]);
+
   const handleFloorClick = (e: ThreeEvent<MouseEvent>) => {
     if (paused) return;
     const [x, z] = resolvePoint(e.point.x, e.point.z);
+    input.clear();
     nav.target = [x, z];
     nav.pending = null;
     markerAge.current = 0;
     marker.current?.position.set(x, 0.03, z);
+    manualZoomOut.current = false;
   };
 
   useFrame((state, rawDt) => {
@@ -988,6 +1197,9 @@ function World({ paused, nearby, onNearbyChange, onArrive, onStartMiniGame }: Ho
     const duck = duckRef.current;
     if (!duck) return;
     const p = duck.position;
+
+    // Tự động quét và giải phóng phím kẹt do bộ gõ tiếng Việt nuốt keyup
+    input.sweepStuckKeys();
 
     if (nav.teleport) {
       p.x = nav.teleport[0];
@@ -1000,11 +1212,11 @@ function World({ paused, nearby, onNearbyChange, onArrive, onStartMiniGame }: Ho
     let dx = 0;
     let dz = 0;
     if (!paused) {
-      const k = input.keys;
-      if (k.has('KeyW') || k.has('ArrowUp')) dz -= 1;
-      if (k.has('KeyS') || k.has('ArrowDown')) dz += 1;
-      if (k.has('KeyA') || k.has('ArrowLeft')) dx -= 1;
-      if (k.has('KeyD') || k.has('ArrowRight')) dx += 1;
+      const d = input.dirs;
+      if (d.has('up')) dz -= 1;
+      if (d.has('down')) dz += 1;
+      if (d.has('left')) dx -= 1;
+      if (d.has('right')) dx += 1;
       dx += input.joyX;
       dz += input.joyY;
     }
@@ -1036,24 +1248,13 @@ function World({ paused, nearby, onNearbyChange, onArrive, onStartMiniGame }: Ho
       len = 1;
     }
 
-    const isBoosted = gameManager.isPlaying && gameManager.speedBoostUntil > performance.now();
-    const SPEED = isBoosted ? 6.2 : 4.2;
+    const SPEED = 4.2;
     const [nx, nz] = resolvePoint(p.x + dx * SPEED * dt, p.z + dz * SPEED * dt, 0.38);
     p.x = nx;
     p.z = nz;
 
     const moving = len > 0.05;
     motion.current.moving = moving;
-
-    // Mini-game item pickup collision
-    if (gameManager.isPlaying) {
-      for (let i = gameManager.items.length - 1; i >= 0; i--) {
-        const it = gameManager.items[i];
-        if (Math.hypot(p.x - it.x, p.z - it.z) < 0.78) {
-          gameManager.collectItem(it.id, p.x, p.z);
-        }
-      }
-    }
 
     // Facing: movement direction, or toward the station when reading it
     let yaw: number | null = null;
@@ -1079,17 +1280,88 @@ function World({ paused, nearby, onNearbyChange, onArrive, onStartMiniGame }: Ho
       onNearbyChange(best);
     }
 
-    // Follow camera
+    // Door proximity check (exit to Garden Game)
+    const isNearExitDoor = Math.hypot(p.x, p.z - (-5.3)) < 1.35;
+    if (isNearExitDoor !== lastNearDoor.current) {
+      lastNearDoor.current = isNearExitDoor;
+      onNearDoorChange?.(isNearExitDoor);
+    }
+
+    // Follow camera calculation
     const portrait = state.size.width < state.size.height;
-    if (paused) tmpPos.set(p.x * 0.85, 5.4, p.z + 7);
-    else if (portrait) tmpPos.set(p.x * 0.85, 13, p.z * 0.6 + 12.5);
-    else tmpPos.set(p.x * 0.5, 9.6, p.z * 0.4 + 10.8);
-    tmpLook.set(
-      p.x * (paused ? 1 : 0.65),
-      paused ? 0.9 : 0.4,
-      p.z * (paused ? 1 : 0.55) - (paused ? 0 : 0.9),
-    );
-    const k = 1 - Math.exp(-dt * 2.6);
+    
+    // Default overview wide camera (chế độ thường)
+    const defPosX = p.x * 0.5;
+    const defPosY = portrait ? 13.0 : 9.4;
+    const defPosZ = portrait ? p.z * 0.6 + 12.5 : p.z * 0.4 + 10.8;
+    const defLookX = p.x * 0.65;
+    const defLookY = 0.4;
+    const defLookZ = p.z * 0.55 - 0.9;
+
+    let targetCamPos: [number, number, number] = [defPosX, defPosY, defPosZ];
+    let targetCamLook: [number, number, number] = [defLookX, defLookY, defLookZ];
+
+    if (openStationKey && STATION_CAMERAS[openStationKey]) {
+      // Station panel is open on the right: close-up framing shifted to the left
+      if (manualZoomOut.current) {
+        targetCamPos = [defPosX, defPosY, defPosZ];
+        targetCamLook = [defLookX, defLookY, defLookZ];
+      } else {
+        const cam = STATION_CAMERAS[openStationKey];
+        targetCamPos = portrait
+          ? [cam.openPos[0], cam.openPos[1] + 1.2, cam.openPos[2] + 1.8]
+          : cam.openPos;
+        targetCamLook = cam.openLook;
+      }
+    } else {
+      // Duck is moving around: dynamically zoom in as duck approaches any station area!
+      let closestStation: StationKey | null = null;
+      let minDist = Infinity;
+      for (const s of STATIONS) {
+        const d = Math.hypot(p.x - s.interact[0], p.z - s.interact[1]);
+        if (d < minDist) {
+          minDist = d;
+          closestStation = s.key;
+        }
+      }
+
+      // Khi vịt di chuyển xa vị trí vừa cuộn chuột zoom out hoặc sang góc khác, tự động khôi phục chế độ zoom
+      if (manualZoomOut.current) {
+        const moved = Math.hypot(p.x - lastDuckPos.current[0], p.z - lastDuckPos.current[1]);
+        if (moved > 0.65 || (closestStation !== lastClosestStation.current && closestStation !== null)) {
+          manualZoomOut.current = false;
+        }
+      }
+      lastClosestStation.current = closestStation;
+
+      const ZOOM_DIST = 2.9; // Distance threshold to trigger close-up camera zoom
+      if (closestStation && minDist < ZOOM_DIST && !manualZoomOut.current) {
+        const cam = STATION_CAMERAS[closestStation];
+        const factor = Math.max(0, Math.min(1, (ZOOM_DIST - minDist) / 1.7));
+        const t = factor * factor * (3 - 2 * factor); // Smoothstep curve
+
+        const cPos = portrait
+          ? [cam.pos[0], cam.pos[1] + 1.2, cam.pos[2] + 1.8]
+          : cam.pos;
+        const cLook = cam.look;
+
+        targetCamPos = [
+          defPosX + (cPos[0] - defPosX) * t,
+          defPosY + (cPos[1] - defPosY) * t,
+          defPosZ + (cPos[2] - defPosZ) * t,
+        ];
+        targetCamLook = [
+          defLookX + (cLook[0] - defLookX) * t,
+          defLookY + (cLook[1] - defLookY) * t,
+          defLookZ + (cLook[2] - defLookZ) * t,
+        ];
+      }
+    }
+
+    tmpPos.set(targetCamPos[0], targetCamPos[1], targetCamPos[2]);
+    tmpLook.set(targetCamLook[0], targetCamLook[1], targetCamLook[2]);
+
+    const k = 1 - Math.exp(-dt * 3.4);
     state.camera.position.lerp(tmpPos, k);
     look.current.lerp(tmpLook, k);
     state.camera.lookAt(look.current);
@@ -1105,18 +1377,24 @@ function World({ paused, nearby, onNearbyChange, onArrive, onStartMiniGame }: Ho
 
   return (
     <>
-      <hemisphereLight args={['#fff4e0', '#6b4a33', 0.9]} />
+      <hemisphereLight args={['#fff8ed', '#593822', 1.05]} />
       <directionalLight
         position={[6, 12, 7]}
-        intensity={1.6}
-        color="#ffe8c2"
+        intensity={1.75}
+        color="#fff3dc"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-11}
         shadow-camera-right={11}
         shadow-camera-top={9}
         shadow-camera-bottom={-9}
-        shadow-bias={-0.0004}
+        shadow-bias={-0.0002}
+      />
+      {/* Soft Window Rim Light */}
+      <directionalLight
+        position={[-7.5, 7.5, -6]}
+        intensity={0.8}
+        color="#fcd34d"
       />
       {/* Pendant lamp */}
       <group position={[0, 0, 1]}>
@@ -1135,26 +1413,15 @@ function World({ paused, nearby, onNearbyChange, onArrive, onStartMiniGame }: Ho
       <Room onFloorClick={handleFloorClick} />
 
       {STATIONS.map((s) => (
-        <Station key={s.key} def={s} active={nearby === s.key} />
+        <Station
+          key={s.key}
+          def={s}
+          active={nearby === s.key}
+          onOpenGardenGame={onOpenGardenGame}
+        />
       ))}
 
-      {/* Arcade Cabinet for Mini Game */}
-      <ArcadeCabinet onStartGame={() => {
-        if (onStartMiniGame) onStartMiniGame();
-        else gameManager.start();
-      }} />
 
-      {/* Mini-game 3D Collectibles */}
-      {gameManager.isPlaying && (
-        <group>
-          {gameManager.items.map((it) => {
-            if (it.type === 'bug') return <BugMesh key={it.id} item={it} />;
-            if (it.type === 'star') return <StarMesh key={it.id} item={it} />;
-            if (it.type === 'coffee') return <CoffeeMesh key={it.id} item={it} />;
-            return <CornMesh key={it.id} item={it} />;
-          })}
-        </group>
-      )}
 
       {/* Click-to-move marker */}
       <group ref={marker} position={[0, -10, 0]}>
@@ -1174,16 +1441,20 @@ function World({ paused, nearby, onNearbyChange, onArrive, onStartMiniGame }: Ho
 export default function HouseScene(props: HouseSceneProps) {
   return (
     <Canvas
-      shadows
+      shadows="soft"
       dpr={[1, 2]}
       camera={{ position: [0, 9.6, 11.4], fov: 42, near: 0.1, far: 60 }}
-      gl={{ antialias: true }}
+      gl={{
+        antialias: true,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1.12,
+      }}
       onPointerMissed={() => {
         document.body.style.cursor = '';
       }}
     >
-      <color attach="background" args={['#1b130d']} />
-      <fog attach="fog" args={['#1b130d', 20, 34]} />
+      <color attach="background" args={['#1c140d']} />
+      <fog attach="fog" args={['#1c140d', 20, 36]} />
       <World {...props} />
     </Canvas>
   );

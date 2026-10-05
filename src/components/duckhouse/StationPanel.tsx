@@ -15,37 +15,86 @@ const CAREER = [
   { n: '04', period: 'Hiện tại', role: 'Kiến trúc phần mềm & Mini ERP', desc: 'Thay Excel rời rạc bằng công cụ may đo, sát thực tế xưởng.' },
 ];
 
+const CORE_SERVICES = [
+  {
+    icon: '🏷️',
+    title: 'Tư Vấn & Cung Cấp Tem Nhãn',
+    desc: 'Tem cuộn dán máy, bế demi, decal xi bạc, vỡ, hologram, keo đông lạnh & chịu nhiệt.',
+  },
+  {
+    icon: '🎨',
+    title: 'Đào Tạo Thiết Kế Kỹ Thuật In',
+    desc: 'Trapping chống lé, Overprint, chuẩn màu Pantone/CMYK, bù co giãn trục in Flexo.',
+  },
+  {
+    icon: '🎞️',
+    title: 'Đào Tạo Xuất Film Chế Bản',
+    desc: 'Bình trang Preps/Signa, làm chủ RIP xưởng in, bù trừ dot gain, tram AM/FM chống moiré.',
+  },
+  {
+    icon: '💻',
+    title: 'Phát Triển Mini ERP Theo Yêu Cầu',
+    desc: 'Báo giá tem tự động 3s, BOM định mức xưởng, theo dõi tiến độ công đoạn realtime.',
+  },
+];
+
 function Overview() {
   return (
-    <div className={styles.grid2}>
-      <div className={styles.col}>
-        <div className={styles.profile}>
-          <div className={styles.avatar}>🦆</div>
-          <div>
-            <div className={styles.profileName}>{personal.fullName}</div>
-            <div className={styles.muted}>The Duck · Đồng Nai, Việt Nam</div>
-            <span className={styles.statusPill}>
-              <span className={styles.dot} /> {personal.status}
-            </span>
-          </div>
+    <div className={styles.col} style={{ gap: '14px' }}>
+      <div className={styles.profile}>
+        <div className={styles.avatar}>🦆</div>
+        <div>
+          <div className={styles.profileName}>{personal.fullName}</div>
+          <div className={styles.muted}>The Duck · Đồng Nai, Việt Nam</div>
+          <span className={styles.statusPill}>
+            <span className={styles.dot} /> {personal.status}
+          </span>
         </div>
-        <p className={styles.lead}>{personal.title}</p>
-        <p className={styles.body}>
-          Gần 20 năm trong thương mại & sản xuất in ấn bao bì, tem nhãn — đi từ kho, kỹ thuật,
-          thiết kế đến điều hành. Tôi kết hợp thực tế sàn xưởng với phần mềm để làm ra công cụ
-          tinh gọn, giải quyết đúng bài toán doanh nghiệp.
-        </p>
       </div>
-      <div className={styles.col}>
-        <div className={styles.metrics}>
-          {personal.metrics.map((m) => (
-            <div key={m.label} className={styles.metric}>
-              <div className={styles.metricValue}>{m.value}</div>
-              <div className={styles.metricLabel}>{m.label}</div>
+
+      <p className={styles.lead} style={{ color: '#38bdf8' }}>{personal.title}</p>
+      
+      <p className={styles.body}>
+        {personal.shortBio}
+      </p>
+
+      {/* 4 Mũi nhọn cốt lõi */}
+      <div>
+        <div className={styles.sectionTitle} style={{ marginBottom: '8px' }}>
+          4 Mũi Nhọn Cốt Lõi
+        </div>
+        <div className={styles.timeline}>
+          {CORE_SERVICES.map((srv) => (
+            <div key={srv.title} className={styles.card} style={{ borderLeft: '3px solid #f59e0b', padding: '10px 12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.15rem' }}>{srv.icon}</span>
+                <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f8fafc' }}>
+                  {srv.title}
+                </span>
+              </div>
+              <div className={styles.cardDesc} style={{ fontSize: '0.74rem', marginTop: '3px' }}>
+                {srv.desc}
+              </div>
             </div>
           ))}
         </div>
-        <div className={styles.sectionTitle}>Triết lý làm việc</div>
+      </div>
+
+      {/* Chỉ số uy tín */}
+      <div className={styles.metrics}>
+        {personal.metrics.map((m) => (
+          <div key={m.label} className={styles.metric}>
+            <div className={styles.metricValue}>{m.value}</div>
+            <div className={styles.metricLabel}>{m.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Triết lý làm việc */}
+      <div>
+        <div className={styles.sectionTitle} style={{ marginBottom: '6px' }}>
+          Triết lý làm việc
+        </div>
         <div className={styles.steps}>
           {personal.story.philosophy.threePrinciples.map((p) => (
             <div key={p.step} className={styles.step}>
@@ -54,11 +103,11 @@ function Overview() {
             </div>
           ))}
         </div>
-        <blockquote className={styles.quote}>
-          “Phần mềm tốt không cần phức tạp — người dùng trực tiếp hiểu được, thao tác nhanh và giải
-          quyết đúng vấn đề.”
-        </blockquote>
       </div>
+
+      <blockquote className={styles.quote}>
+        “{personal.story.philosophy.mainQuote}”
+      </blockquote>
     </div>
   );
 }
@@ -202,10 +251,11 @@ export default function StationPanel({ stationKey, onClose, onStep }: StationPan
   const content = CONTENT[stationKey];
 
   return (
-    <div className={styles.panelBackdrop} onClick={onClose}>
+    <div className={styles.sidePanelContainer}>
+      <div className={styles.panelDismissArea} onClick={onClose} aria-label="Đóng bảng thông tin" />
       <section
         key={stationKey}
-        className={styles.panel}
+        className={styles.sidePanel}
         style={{ '--accent': def.color } as React.CSSProperties}
         onClick={(e) => e.stopPropagation()}
         role="dialog"

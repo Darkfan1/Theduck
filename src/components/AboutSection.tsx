@@ -19,7 +19,9 @@ import {
   Wrench,
   CheckCircle2,
   Code2,
-  Monitor
+  Monitor,
+  Tag,
+  Palette
 } from 'lucide-react';
 
 interface AboutSectionProps {
@@ -58,34 +60,34 @@ export default function AboutSection({ onSelectTab }: AboutSectionProps) {
 
   const solutions = [
     {
-      title: 'Mini ERP May Đo Cho Doanh Nghiệp SME',
-      desc: 'Giải pháp quản trị tinh gọn theo quy trình thực tế của doanh nghiệp, không cồng kềnh, không tính năng thừa, dễ học và áp dụng ngay.',
-      icon: <Layers size={18} color="var(--cyan-primary)" />
+      title: 'Tư Vấn & Cung Cấp Tem Nhãn Đa Ngành',
+      desc: 'Cung cấp tem cuộn dán máy tự động, tem tờ bế demi, decal giấy Fasson/Lintec, nhựa PP/PE/PVC, xi bạc, tem vỡ, keo đông lạnh/chịu nhiệt/hóa chất.',
+      icon: <Tag size={18} color="var(--cyan-primary)" />
     },
     {
-      title: 'Chuyên Sâu Ngành In Ấn, Tem Nhãn & Bao Bì',
-      desc: 'Ứng dụng kinh nghiệm thực tế giải quyết bài toán in cuộn, in tờ rời, tem mã vạch siêu tốc qua iframe, bao bì carton & bao bì nhựa.',
+      title: 'Đào Tạo Thiết Kế Kỹ Thuật In Thực Chiến',
+      desc: 'Đào tạo 1-1 cho designer: Trapping chống lé trắng, Overprint, chuẩn màu Pantone/CMYK, bù trừ co giãn trục Flexo, chuẩn hóa khuôn bế & ép kim.',
+      icon: <Palette size={18} color="var(--cyan-primary)" />
+    },
+    {
+      title: 'Đào Tạo Xuất Film Chế Bản Prepress & CTP',
+      desc: 'Chuyển giao quy trình bình trang Signa Station/Preps, làm chủ RIP xưởng in, bù dot gain hạt trượt, tram AM/FM chống moiré, xuất bản CTP/CTF.',
       icon: <Printer size={18} color="var(--cyan-primary)" />
     },
     {
+      title: 'Phát Triển Mini ERP May Đo Theo Yêu Cầu',
+      desc: 'Phần mềm may đo cho xưởng in & sản xuất: Báo giá tem nhãn tự động 3 giây, tự tính barem khổ decal tối ưu, bóc tách lệnh in & BOM vật tư realtime.',
+      icon: <Layers size={18} color="var(--cyan-primary)" />
+    },
+    {
       title: 'Web App & Desktop App (Tauri v2 Native)',
-      desc: 'Ứng dụng chuyên biệt cho phòng ban nội bộ, chạy mượt mà trên trình duyệt lẫn cài đặt desktop siêu nhẹ (<70MB RAM), tối ưu thao tác hàng ngày.',
+      desc: 'Ứng dụng chuyên biệt cho xưởng và văn phòng, in tem siêu tốc qua iframe, quét barcode/QR tức thì, chạy desktop siêu nhẹ (<75MB RAM).',
       icon: <Monitor size={18} color="var(--cyan-primary)" />
     },
     {
       title: 'Tự Động Hóa Thay Thế Excel Rời Rạc',
-      desc: 'Số hóa và thay thế việc nhập liệu thủ công bằng nhiều file Excel rời rạc, chống sai lệch số liệu và tiết kiệm hàng giờ mỗi ngày.',
+      desc: 'Số hóa và thay thế việc nhập liệu thủ công bằng nhiều file Excel rời rạc, chống sai lệch số liệu tồn kho decal, khuôn bế và đơn hàng.',
       icon: <Cpu size={18} color="var(--cyan-primary)" />
-    },
-    {
-      title: 'Công Cụ Tính Giá, Báo Giá & Quản Trị BOM',
-      desc: 'Tự động hóa công thức tính giá thành sản phẩm phức tạp theo cấu trúc định mức nguyên vật liệu (BOM), xuất báo giá nhanh và chuẩn xác.',
-      icon: <FileSpreadsheet size={18} color="var(--cyan-primary)" />
-    },
-    {
-      title: 'Tool Hỗ Trợ Thiết Kế & Kỹ Thuật',
-      desc: 'Công cụ hỗ trợ xử lý file, bình trang, tính khổ giấy/màng, quản lý thông số kỹ thuật in ấn và giảm thiểu thao tác lặp lại.',
-      icon: <Wrench size={18} color="var(--cyan-primary)" />
     }
   ];
 
@@ -107,7 +109,7 @@ export default function AboutSection({ onSelectTab }: AboutSectionProps) {
           </div>
 
           <div style={{ fontSize: '0.92rem', color: 'var(--cyan-primary)', fontWeight: 500, marginBottom: '14px' }}>
-            Kỹ thuật &amp; Vận hành sản xuất • Giải pháp phần mềm doanh nghiệp (MES / Mini ERP)
+            {personal.title}
           </div>
 
           <p style={{ fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.7, margin: '0 0 18px 0' }}>

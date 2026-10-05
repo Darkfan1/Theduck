@@ -247,6 +247,170 @@ class DuckAudioController {
       });
     } catch {}
   }
+
+  /**
+   * Sound when stomping an enemy (Mario squish + bounce)
+   */
+  public playStompSound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(380, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.12);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.24, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.16);
+
+      // Cute bounce pop
+      setTimeout(() => {
+        if (this.isMuted) return;
+        const c = this.getContext();
+        if (!c) return;
+        const t = c.currentTime;
+        const o2 = c.createOscillator();
+        const g2 = c.createGain();
+        o2.type = 'sine';
+        o2.frequency.setValueAtTime(587, t);
+        o2.frequency.exponentialRampToValueAtTime(880, t + 0.1);
+        g2.gain.setValueAtTime(0.18, t);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        o2.connect(g2);
+        g2.connect(c.destination);
+        o2.start(t);
+        o2.stop(t + 0.13);
+      }, 70);
+    } catch {}
+  }
+
+  /**
+   * Sound when double jumping with wing flap
+   */
+  public playFlapSound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // Two quick flutter whooshes
+      [0, 0.08].forEach((offset) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now + offset);
+        osc.frequency.exponentialRampToValueAtTime(750, now + offset + 0.07);
+
+        gain.gain.setValueAtTime(0.001, now + offset);
+        gain.gain.linearRampToValueAtTime(0.16, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.09);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.1);
+      });
+    } catch {}
+  }
+
+  /**
+   * Sound when head-butting a question block from below
+   */
+  public playBumpSound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(260, now);
+      osc.frequency.exponentialRampToValueAtTime(140, now + 0.1);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } catch {}
+  }
+
+  /**
+   * Sound when bouncing on a spring mushroom
+   */
+  public playSpringSound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(260, now);
+      osc.frequency.exponentialRampToValueAtTime(780, now + 0.22);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.25, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.26);
+    } catch {}
+  }
+
+  /**
+   * Cheerful stage clear arpeggio
+   */
+  public playStageClearSound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+      notes.forEach((freq, idx) => {
+        const start = now + idx * 0.1;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, start);
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(0.2, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.28);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(start);
+        osc.stop(start + 0.3);
+      });
+    } catch {}
+  }
 }
 
 export const duckAudio = new DuckAudioController();

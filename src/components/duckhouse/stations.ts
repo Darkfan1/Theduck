@@ -54,34 +54,32 @@ export const STATIONS: StationDef[] = [
   {
     key: 'projects',
     number: '04',
-    emoji: '📦',
+    emoji: '📚',
     label: 'Dự Án',
-    place: 'Kệ kho Mini ERP',
+    place: 'Kệ sách dự án',
     color: '#34d399',
     interact: [5.1, 1.8],
     collider: [7.1, 1.8, 1.4],
-    labelAt: [7.2, 3.2, 1.7],
+    labelAt: [6.8, 3.75, 1.7],
   },
   {
     key: 'contact',
     number: '05',
     emoji: '📮',
     label: 'Liên Hệ',
-    place: 'Cửa & hòm thư',
+    place: 'Hòm thư liên hệ',
     color: '#f472b6',
-    interact: [0.6, -4.2],
+    interact: [1.5, -4.2],
     collider: [1.5, -5.2, 0.5],
-    labelAt: [0.7, 3.1, -5.4],
+    labelAt: [1.5, 2.5, -5.2],
   },
 ];
 
-/** Plants, server rack, kiosk… */
+/** Plants, server rack… */
 export const EXTRA_COLLIDERS: [number, number, number][] = [
   [-7.1, 4.8, 0.5],
   [7.1, 4.8, 0.5],
   [7, -5.2, 0.6],
-  [6.3, 3.7, 0.45],
-  [-7.2, 3.8, 0.6],
 ];
 
 export const ROOM_BOUNDS = { minX: -7.5, maxX: 7.5, minZ: -5.5, maxZ: 5.5 };

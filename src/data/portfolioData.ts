@@ -29,10 +29,10 @@ export const PORTFOLIO_DATA = {
     nickName: "The Duck",
     fullName: "Tôn Đông Vũ",
     birthYear: 1982,
-    title: "Chuyên Gia Vận Hành Sản Xuất & Kiến Trúc Phần Mềm Doanh Nghiệp (MES / ERP)",
+    title: "Tư Vấn Tem Nhãn · Đào Tạo Kỹ Thuật In & Prepress · Phát Triển Mini ERP",
     domain: "theduck.io.vn",
-    tagline: "Hiểu đúng vấn đề → Thiết kế đúng quy trình → Xây dựng đúng công cụ.",
-    shortBio: "Gần 20 năm kinh nghiệm trong lĩnh vực thương mại dịch vụ và sản xuất in ấn bao bì nhựa, bao bì carton, bao bì giấy và tem nhãn. Kết hợp sâu sắc giữa thực tế sàn xưởng và công nghệ phần mềm để tạo nên những công cụ tinh gọn, giải quyết đúng bài toán doanh nghiệp.",
+    tagline: "Thực chiến xưởng in → Chuẩn hóa kỹ thuật chế bản → Số hóa quản trị bằng Mini ERP tinh gọn.",
+    shortBio: "Gần 20 năm kinh nghiệm gắn bó trực tiếp với sàn xưởng in ấn và sản xuất tem nhãn công nghiệp — từ quản trị kho vật tư, thiết kế kỹ thuật in, bình trang xuất film chế bản cho đến điều hành xưởng. Tôi đồng hành cùng doanh nghiệp qua 4 mũi nhọn cốt lõi: Tư vấn & cung ứng tem nhãn; Đào tạo thiết kế kỹ thuật in; Đào tạo xuất film chế bản (Prepress); và Phát triển phần mềm Mini ERP may đo theo quy trình thực tế.",
     status: "Sẵn sàng nhận dự án Freelance & Tư vấn",
     location: "Việt Nam (Hỗ trợ Onsite & Remote toàn quốc)",
     contact: {
@@ -43,64 +43,63 @@ export const PORTFOLIO_DATA = {
       github: "https://github.com/theduck-vn",
     },
     metrics: [
-      { label: "Năm trong ngành sản xuất", value: "20+" },
-      { label: "Kinh nghiệm thực chiến", value: "Kho • SX • Quản trị" },
-      { label: "Tính ứng dụng thực tế", value: "100%" },
-      { label: "Mức độ hài lòng", value: "99.8%" },
+      { label: "Năm xưởng in & tem nhãn", value: "20+" },
+      { label: "Tư vấn & Cung cấp tem nhãn", value: "Đa ngành" },
+      { label: "Đào tạo in & Prepress", value: "1-1 Thực chiến" },
+      { label: "Mini ERP tải siêu tốc", value: "< 0.3s" },
     ],
 
-    // Câu chuyện cá nhân chi tiết theo đúng bài viết
+    // Câu chuyện cá nhân chi tiết theo đúng định vị 4 công việc chính
     story: {
       whoAmI: {
         title: "Tôi là ai",
         paragraphs: [
-          "Tôi là Tôn Đông Vũ, bạn có thể gọi ngắn gọn là Đông Vũ hoặc Dean. Tôi hiện đang sinh sống, làm việc tại Đồng Nai, Việt Nam.",
-          "Tôi có gần 20 năm kinh nghiệm trong lĩnh vực thương mại dịch vụ và sản xuất in ấn bao bì nhựa, bao bì carton bao bì giấy và tem nhãn, với hành trình đi qua nhiều vị trí khác nhau — từ quản lý kho, kỹ thuật, thiết kế, sản xuất đến quản lý và điều hành doanh nghiệp.",
-          "Ba năm đầu làm quản lý kho giúp tôi hình thành nền tảng về kỷ luật, quản trị nguyên vật liệu và dòng chảy hàng hóa. Sau đó, tôi đi sâu vào kỹ thuật và mỹ thuật công nghiệp, từ thiết kế bao bì nhựa, bao bì carton đến thiết kế tem nhãn và xử lý các vấn đề kỹ thuật trong in ấn.",
-          "Trải qua nhiều năm trực tiếp làm việc tại xưởng, tôi từng bước chuyển sang quản lý sản xuất và quản trị vận hành. Chính quá trình đó giúp tôi nhìn một doanh nghiệp không chỉ từ một công đoạn riêng lẻ, mà từ toàn bộ chuỗi vận hành — từ đơn hàng, nguyên vật liệu, kế hoạch sản xuất, kỹ thuật, máy móc, con người cho đến chất lượng và giao hàng."
+          "Tôi là Tôn Đông Vũ, bạn có thể gọi ngắn gọn là Đông Vũ hoặc The Duck. Tôi hiện đang sinh sống, làm việc tại Đồng Nai, Việt Nam.",
+          "Tôi có gần 20 năm kinh nghiệm gắn bó trực tiếp với thương mại dịch vụ và sản xuất in ấn bao bì, tem nhãn công nghiệp — đi qua toàn bộ chuỗi mắt xích thực chiến: từ quản trị kho vật tư, thiết kế kỹ thuật in ấn, bình trang xuất film chế bản đến quản lý và điều hành xưởng sản xuất.",
+          "Hành trình đó mang lại cho tôi sự am hiểu sâu sắc: Từ đặc tính từng dòng decal (giấy, nhựa PP/PE, xi bạc, tem vỡ, keo đông lạnh/chịu nhiệt), kỹ thuật bù trừ co giãn trục in, chống lé trapping, quản lý màu Pantone đến quy trình RIP và xuất film/CTP đạt chuẩn xưởng.",
+          "Lợi thế khác biệt lớn nhất của tôi là sự kết hợp giữa am hiểu thực tế sàn xưởng in ấn với năng lực kiến trúc phần mềm hiện đại. Thay vì các giải pháp cồng kềnh, tôi trực tiếp tư vấn cung cấp tem nhãn, chuyển giao đào tạo kỹ thuật xưởng và phát triển các hệ thống Mini ERP may đo giải quyết trúng đích bài toán của doanh nghiệp."
         ]
       },
 
       fromProductionToTech: {
-        title: "Từ sản xuất đến công nghệ",
+        title: "Từ thực chiến xưởng in đến công nghệ",
         paragraphs: [
-          "Trong quá trình quản lý và vận hành thực tế, tôi nhận ra rằng rất nhiều vấn đề trong doanh nghiệp không nằm ở việc thiếu nhân sự hay thiếu phần mềm, mà nằm ở việc quy trình chưa được thiết kế đúng và thông tin chưa được kết nối hiệu quả.",
-          "Đó cũng là lý do tôi bắt đầu dành nhiều thời gian hơn cho việc xây dựng các ứng dụng, công cụ quản trị và mini ERP để giải quyết những bài toán thực tế trong doanh nghiệp.",
-          "Tôi đặc biệt tập trung vào các giải pháp cho ngành in ấn, tem nhãn, bao bì và sản xuất công nghiệp, nơi tôi có lợi thế lớn về kinh nghiệm thực tế.",
-          "Tôi không tiếp cận một bài toán chỉ từ góc độ lập trình. Tôi bắt đầu từ câu hỏi: 'Doanh nghiệp đang gặp vấn đề gì và quy trình thực tế đang vận hành như thế nào?' — Sau đó mới tìm cách dùng công nghệ để giải quyết nó một cách đơn giản, phù hợp và có tính ứng dụng cao."
+          "Trong quá trình quản lý và vận hành xưởng thực tế, tôi nhận ra rằng rất nhiều vấn đề của doanh nghiệp in ấn - tem nhãn không nằm ở máy móc hay con người, mà nằm ở việc quy trình kỹ thuật chưa được chuẩn hóa và dữ liệu bị phân tán trong hàng chục file Excel rời rạc.",
+          "Sai lệch số liệu tồn kho decal, nhầm lẫn barem tính giá, lỗi file in bị lé trắng (trapping), hỏng bản kẽm do bù dot gain sai... là những thất thoát vô cùng tốn kém nhưng hoàn toàn có thể khắc phục được.",
+          "Đó là lý do tôi phát triển con đường tích hợp: Vừa đào tạo chuẩn hóa kỹ thuật in & chế bản cho nhân sự xưởng, vừa xây dựng các phần mềm Mini ERP may đo để tự động hóa tính giá, quản lý lệnh in và theo dõi tiến độ sàn xưởng theo thời gian thực.",
+          "Tôi bắt đầu từ câu hỏi: 'Doanh nghiệp in ấn đang gặp điểm nghẽn gì ở sàn xưởng?' — Sau đó giải quyết nó bằng kỹ thuật chuẩn và công nghệ tinh gọn, sát thực tế nhất."
         ]
       },
 
       whatICanHelp: {
         title: "Tôi có thể giúp gì?",
-        subtitle: "Tôi nhận phát triển các giải pháp theo nhu cầu thực tế của từng doanh nghiệp:",
+        subtitle: "4 Mũi nhọn cốt lõi và các giải pháp thực tế cho doanh nghiệp:",
         servicesList: [
-          { title: "Web App / Desktop App", desc: "Dành riêng cho các quy trình nội bộ, chạy mượt mà trên mọi máy tính văn phòng và xưởng sản xuất." },
-          { title: "Tool Chuyên Dụng", desc: "Tối ưu hóa công tác thiết kế, xử lý kỹ thuật in ấn và giám sát công đoạn sản xuất." },
-          { title: "Mini ERP May Đo", desc: "Giải pháp quản trị tinh gọn cho doanh nghiệp vừa và nhỏ, không cồng kềnh, không tính năng thừa." },
-          { title: "Quản Lý Đơn Hàng & Kho Vận", desc: "Kiểm soát xuyên suốt chuỗi: nhận đơn, lập lệnh sản xuất, tồn kho nguyên vật liệu và giao nhận." },
-          { title: "Tính Giá & Báo Giá Tự Động", desc: "Công cụ tính giá thành sản xuất, dự toán chi phí nguyên phụ liệu và quản lý dữ liệu khách hàng." },
-          { title: "Tự Động Hóa Tác Vụ Lặp Lại", desc: "Cắt giảm công việc thủ công bằng bảng tính Excel rườm rà, loại bỏ sai sót số liệu giữa các bộ phận." },
-          { title: "Số Hóa Ngành In & Bao Bì", desc: "Giải pháp cho các bài toán đặc thù của in ấn, bao bì nhựa/carton và in tem nhãn mã vạch." }
+          { title: "Tư Vấn & Cung Cấp Tem Nhãn", desc: "Cung cấp đa dạng tem cuộn dán máy, tem tờ bế demi, decal giấy Fasson/Lintec, nhựa PP/PE/PVC, xi bạc, tem vỡ, hologram; keo dán đông lạnh, kháng nhiệt và hóa chất cho mọi ngành nghề." },
+          { title: "Đào Tạo Thiết Kế Kỹ Thuật In", desc: "Huấn luyện thực chiến 1-1 cho designer: Trapping chống lé trắng, Overprint, chuẩn màu Pantone/CMYK, bù trừ co giãn trục Flexo, chuẩn hóa khuôn bế/ép kim/UV định hình." },
+          { title: "Đào Tạo Xuất Film Chế Bản (Prepress)", desc: "Chuyển giao quy trình bình trang tự động (Signa Station, Preps), làm chủ RIP xưởng in, kiểm soát đường cong bù dot gain hạt trượt, tram AM/FM chống moiré, xuất bản CTP/CTF." },
+          { title: "Phát Triển Mini ERP Theo Yêu Cầu", desc: "May đo phần mềm quản trị xưởng in: Báo giá tem nhãn tự động 3 giây, tự tính barem khổ decal tối ưu, bóc tách lệnh sản xuất & BOM vật tư, theo dõi tiến độ công đoạn realtime." },
+          { title: "Desktop App Native Siêu Nhẹ (Tauri v2)", desc: "Ứng dụng máy bàn chiếm <75MB RAM, in tem mã vạch siêu tốc qua iframe không đơ máy, quét barcode/QR không độ trễ, chạy ngầm khay hệ thống ổn định." },
+          { title: "Số Hóa & Thay Thế Excel Rời Rạc", desc: "Cắt giảm 60% thời gian nhập liệu thủ công, triệt tiêu sai lệch số liệu tồn kho nguyên vật liệu decal, khuôn bế, trục in và đơn hàng giữa các bộ phận." }
         ],
-        specialNote: "Tôi đặc biệt quan tâm đến những bài toán mà các phần mềm phổ thông khó đáp ứng vì mỗi doanh nghiệp có một cách vận hành riêng."
+        specialNote: "Tôi đặc biệt am hiểu và giải quyết triệt để những bài toán đặc thù của xưởng in ấn và sản xuất tem nhãn mà các phần mềm đóng gói sẵn trên thị trường không thể đáp ứng."
       },
 
       philosophy: {
         title: "Triết lý làm việc",
-        mainQuote: "Tôi tin rằng phần mềm tốt không nhất thiết phải phức tạp. Một công cụ tốt là công cụ mà người trực tiếp sử dụng có thể hiểu, thao tác nhanh và giải quyết được đúng vấn đề họ đang gặp phải.",
-        subQuote: "Hơn 20 năm đi từ sàn xưởng, kho bãi đến bàn quản trị cho tôi một góc nhìn khá đặc biệt: hiểu vấn đề từ thực tế trước khi tìm giải pháp bằng công nghệ.",
+        mainQuote: "Phần mềm tốt không nhất thiết phải phức tạp. Một công cụ tốt là công cụ mà người trực tiếp tại xưởng in có thể hiểu, thao tác nhanh và giải quyết đúng bài toán họ đang gặp phải.",
+        subQuote: "Gần 20 năm đi từ sàn xưởng, kho bãi đến bàn quản trị cho tôi một góc nhìn khác biệt: Hiểu bài toán thực tế trước khi dùng công nghệ giải quyết.",
         threePrinciples: [
-          { step: "01", text: "Hiểu đúng vấn đề" },
-          { step: "02", text: "Thiết kế đúng quy trình" },
-          { step: "03", text: "Xây dựng đúng công cụ" }
+          { step: "01", text: "Hiểu đúng vấn đề (Từ thực tế xưởng in & vật liệu)" },
+          { step: "02", text: "Thiết kế đúng quy trình (Chuẩn hóa kỹ thuật in & chế bản)" },
+          { step: "03", text: "Xây dựng đúng công cụ (Mini ERP tinh gọn, may đo)" }
         ]
       },
 
       orientation: {
         title: "Định hướng & Lời ngỏ",
-        content: "Tôi đang phát triển con đường freelancer theo hướng kết hợp giữa kinh nghiệm vận hành sản xuất và công nghệ phần mềm, tập trung vào các giải pháp thực tế cho doanh nghiệp trong lĩnh vực in ấn, tem nhãn, bao bì và sản xuất công nghiệp. Tôi mong muốn hợp tác với những doanh nghiệp đang có những quy trình còn thủ công, dữ liệu còn phân tán hoặc đang gặp những bài toán quản trị mà phần mềm thông thường chưa giải quyết được.",
-        callToAction: "Nếu bạn có một vấn đề thực tế và đang nghĩ: 'Giá mà có một phần mềm làm được việc này…' — Có thể đó chính là thứ tôi có thể giúp bạn xây dựng."
+        content: "Tôi hợp tác cùng các chủ doanh nghiệp in ấn, bao bì, tem nhãn và sản xuất đang có quy trình thủ công, file in hay gặp lỗi kỹ thuật, hoặc đang tìm kiếm giải pháp cung ứng tem nhãn chất lượng cao kết hợp công cụ quản trị tinh gọn.",
+        callToAction: "Nếu bạn đang cần giải pháp tem nhãn tối ưu, muốn nâng cấp tay nghề in/prepress cho đội ngũ, hoặc cần một phần mềm quản lý xưởng may đo sát thực tế — hãy cùng kết nối và trao đổi."
       }
     }
   },
