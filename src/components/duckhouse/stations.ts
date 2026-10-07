@@ -80,6 +80,7 @@ export const EXTRA_COLLIDERS: [number, number, number][] = [
   [-7.1, 4.8, 0.5],
   [7.1, 4.8, 0.5],
   [7, -5.2, 0.6],
+  [3.75, 4.1, 0.48],
 ];
 
 export const ROOM_BOUNDS = { minX: -7.5, maxX: 7.5, minZ: -5.5, maxZ: 5.5 };

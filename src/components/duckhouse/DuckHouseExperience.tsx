@@ -6,6 +6,7 @@ import { PORTFOLIO_DATA } from '@/data/portfolioData';
 import { duckAudio } from '@/utils/duckAudio';
 import { STATIONS, STATION_ORDER, getStation, isStationKey, type StationKey } from './stations';
 import { input, nav, MOVE_KEYS, getDirection } from './controls';
+import { type TimePhase, TIME_CONFIGS, getRealtimePhase } from './timeConfig';
 import StationPanel from './StationPanel';
 import MarioGardenGame from './MarioGardenGame';
 import styles from './DuckHouse.module.css';
@@ -79,6 +80,42 @@ export default function DuckHouseExperience() {
   const [welcome, setWelcome] = useState(false);
   const [muted, setMuted] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
+  const [timeMode, setTimeMode] = useState<'auto' | TimePhase>('auto');
+  const [clockTime, setClockTime] = useState<Date>(() => new Date());
+  const [showTimeMenu, setShowTimeMenu] = useState(false);
+  const [isDuckSleeping, setIsDuckSleeping] = useState(false);
+  const timeMenuRef = useRef<HTMLDivElement>(null);
+
+  // Update real-time clock every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setClockTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Close time menu on outside click
+  useEffect(() => {
+    if (!showTimeMenu) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (timeMenuRef.current && !timeMenuRef.current.contains(e.target as Node)) {
+        setShowTimeMenu(false);
+      }
+    };
+    window.addEventListener('pointerdown', handleOutside);
+    return () => window.removeEventListener('pointerdown', handleOutside);
+  }, [showTimeMenu]);
+
+  const activePhase: TimePhase =
+    timeMode === 'auto' ? getRealtimePhase(clockTime) : timeMode;
+  const activeConfig = TIME_CONFIGS[activePhase];
+
+  const formattedTime = clockTime.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
 
   const openRef = useRef(open);
   const nearbyRef = useRef(nearby);
@@ -162,6 +199,8 @@ export default function DuckHouseExperience() {
       if (gardenGameRef.current) return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      input.notifyInteract();
+      setIsDuckSleeping(false);
       const code = e.code;
       const key = (e.key || '').toLowerCase();
       const dir = getDirection(e);
@@ -264,6 +303,10 @@ export default function DuckHouseExperience() {
           onNearDoorChange={setNearDoor}
           openStationKey={open}
           onCloseStation={closeStation}
+          timePhase={activePhase}
+          currentTime={clockTime}
+          onSleepChange={setIsDuckSleeping}
+          gardenGameOpen={gardenGame}
         />
       </div>
 
@@ -281,6 +324,63 @@ export default function DuckHouseExperience() {
           </div>
         </div>
         <div className={styles.topActions}>
+          {/* Real-time Environment Time Widget */}
+          <div className={styles.timeWidgetWrap} ref={timeMenuRef}>
+            <button
+              className={styles.timeWidgetBtn}
+              onClick={() => setShowTimeMenu((v) => !v)}
+              title="Đổi thời gian / quang cảnh căn nhà"
+              aria-label="Cài đặt quang cảnh thời gian"
+            >
+              <span>{activeConfig.emoji}</span>
+              <span className={styles.timeClockText}>{formattedTime}</span>
+              {timeMode === 'auto' ? (
+                <span className={styles.autoTag}>Auto</span>
+              ) : (
+                <span className={styles.hideSm}>{activeConfig.label}</span>
+              )}
+              <span className={styles.arrowIcon}>▼</span>
+            </button>
+
+            {showTimeMenu && (
+              <div className={styles.timeMenu}>
+                <div className={styles.timeMenuHeader}>Quang cảnh nhà vịt</div>
+                <button
+                  className={`${styles.timeMenuItem} ${
+                    timeMode === 'auto' ? styles.timeMenuItemActive : ''
+                  }`}
+                  onClick={() => {
+                    setTimeMode('auto');
+                    setShowTimeMenu(false);
+                  }}
+                >
+                  <span>🔄 Tự động (Giờ thực tế)</span>
+                  {timeMode === 'auto' && <span>✓</span>}
+                </button>
+                {(Object.keys(TIME_CONFIGS) as TimePhase[]).map((phase) => {
+                  const cfg = TIME_CONFIGS[phase];
+                  return (
+                    <button
+                      key={phase}
+                      className={`${styles.timeMenuItem} ${
+                        timeMode === phase ? styles.timeMenuItemActive : ''
+                      }`}
+                      onClick={() => {
+                        setTimeMode(phase);
+                        setShowTimeMenu(false);
+                      }}
+                    >
+                      <span>
+                        {cfg.emoji} {cfg.label}
+                      </span>
+                      {timeMode === phase && <span>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <button
             className={`${styles.hudBtn} ${styles.hudBtnAccent}`}
             onClick={() => {
@@ -520,6 +620,14 @@ export default function DuckHouseExperience() {
 
       {open && <StationPanel stationKey={open} onClose={closeStation} onStep={stepStation} />}
       {gardenGame && <MarioGardenGame onClose={() => setGardenGame(false)} />}
+
+      {/* Sleeping night toast */}
+      {isDuckSleeping && activePhase === 'night' && !open && !gardenGame && (
+        <div className={styles.sleepToast}>
+          <span>🌙</span>
+          <span>Vịt đang ngủ say… Nhấn phím bất kỳ hoặc click để đánh thức</span>
+        </div>
+      )}
     </main>
   );
 }

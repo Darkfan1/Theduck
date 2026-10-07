@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Billboard } from '@react-three/drei';
+import { Billboard, RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { input } from './controls';
@@ -375,11 +375,283 @@ function QuackBubble() {
   );
 }
 
+function SleepZzzBubble({ sleeping }: { sleeping?: boolean }) {
+  const zzzRef = useRef<THREE.Group>(null);
+  const textures = useMemo(() => {
+    if (typeof document === 'undefined') return [];
+    return ['Z', 'z', '·'].map((char, i) => {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      if (!ctx) return null;
+      ctx.font = `bold ${i === 0 ? 76 : i === 1 ? 58 : 42}px -apple-system, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#93c5fd';
+      ctx.shadowColor = '#3b82f6';
+      ctx.shadowBlur = 10;
+      ctx.fillText(char, 64, 64);
+      return new THREE.CanvasTexture(c);
+    });
+  }, []);
+
+  const itemsRef = useRef<(THREE.Group | null)[]>([]);
+
+  useFrame(({ clock }) => {
+    if (!zzzRef.current) return;
+    zzzRef.current.visible = Boolean(sleeping);
+    if (!sleeping) return;
+
+    const t = clock.elapsedTime;
+    itemsRef.current.forEach((item, idx) => {
+      if (!item) return;
+      const cycle = (t * 0.7 + idx * 0.45) % 1.8;
+      const p = cycle / 1.8;
+      const rise = p * 0.85;
+      const sway = Math.sin(p * Math.PI * 2 + idx) * 0.12;
+      item.position.set(0.18 + rise * 0.2 + sway, 1.35 + rise, 0.1);
+      const scale = Math.sin(p * Math.PI) * (0.6 + (2 - idx) * 0.2);
+      item.scale.set(scale, scale, scale);
+    });
+  });
+
+  if (!textures.length) return null;
+  return (
+    <group ref={zzzRef} visible={false}>
+      {textures.map((tex, i) => (
+        <Billboard
+          key={i}
+          ref={(el) => {
+            itemsRef.current[i] = el;
+          }}
+        >
+          {tex && (
+            <mesh>
+              <planeGeometry args={[0.42, 0.42]} />
+              <meshBasicMaterial map={tex} transparent depthWrite={false} />
+            </mesh>
+          )}
+        </Billboard>
+      ))}
+    </group>
+  );
+}
+
+function RelaxBlissBubble({ lounging, sleeping }: { lounging?: boolean; sleeping?: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const texture = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const c = document.createElement('canvas');
+    c.width = 128;
+    c.height = 128;
+    const ctx = c.getContext('2d');
+    if (!ctx) return null;
+    ctx.font = '64px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('✨', 64, 64);
+    return new THREE.CanvasTexture(c);
+  }, []);
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    const visible = Boolean(lounging && !sleeping);
+    groupRef.current.visible = visible;
+    if (!visible) return;
+
+    const t = clock.elapsedTime;
+    const cycle = (t * 0.6) % 2.4;
+    const p = cycle / 2.4;
+    const rise = p * 0.6;
+    const sway = Math.sin(p * Math.PI * 2) * 0.08;
+    groupRef.current.position.set(0.1 + sway, 1.45 + rise, 0.15);
+    const scale = Math.sin(p * Math.PI) * 0.55;
+    groupRef.current.scale.set(scale, scale, scale);
+  });
+
+  if (!texture) return null;
+  return (
+    <Billboard ref={groupRef} visible={false}>
+      <mesh>
+        <planeGeometry args={[0.5, 0.5]} />
+        <meshBasicMaterial map={texture} transparent depthWrite={false} />
+      </mesh>
+    </Billboard>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Sunglasses & Cozy Blanket Accessories                               */
+/* ------------------------------------------------------------------ */
+
+function Sunglasses({ visible }: { visible: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const scaleRef = useRef(0);
+
+  useFrame((_, rawDt) => {
+    if (!groupRef.current) return;
+    const dt = Math.min(rawDt, 0.05);
+    const target = visible ? 1 : 0;
+    scaleRef.current = THREE.MathUtils.lerp(scaleRef.current, target, 1 - Math.exp(-dt * 12));
+    groupRef.current.scale.setScalar(scaleRef.current);
+    groupRef.current.visible = scaleRef.current > 0.01;
+  });
+
+  return (
+    <group ref={groupRef} position={[HC[0], HC[1] + 0.062, HC[2] + 0.285]} rotation={[0.08, 0, 0]}>
+      {/* Central bridge */}
+      <mesh position={[0, 0.012, 0.01]}>
+        <boxGeometry args={[0.06, 0.014, 0.012]} />
+        <meshPhysicalMaterial color="#d97706" metalness={0.9} roughness={0.2} />
+      </mesh>
+
+      {/* Left Lens + Rim */}
+      <group position={[0.11, 0, 0]} rotation={[0, 0.18, 0]}>
+        <mesh>
+          <boxGeometry args={[0.115, 0.075, 0.016]} />
+          <meshPhysicalMaterial
+            color="#0b0f19"
+            roughness={0.06}
+            metalness={0.2}
+            clearcoat={1}
+            clearcoatRoughness={0.05}
+          />
+        </mesh>
+        {/* Gold frame trim */}
+        <mesh scale={[1.08, 1.08, 0.5]}>
+          <boxGeometry args={[0.115, 0.075, 0.016]} />
+          <meshPhysicalMaterial color="#f59e0b" metalness={0.9} roughness={0.2} />
+        </mesh>
+      </group>
+
+      {/* Right Lens + Rim */}
+      <group position={[-0.11, 0, 0]} rotation={[0, -0.18, 0]}>
+        <mesh>
+          <boxGeometry args={[0.115, 0.075, 0.016]} />
+          <meshPhysicalMaterial
+            color="#0b0f19"
+            roughness={0.06}
+            metalness={0.2}
+            clearcoat={1}
+            clearcoatRoughness={0.05}
+          />
+        </mesh>
+        <mesh scale={[1.08, 1.08, 0.5]}>
+          <boxGeometry args={[0.115, 0.075, 0.016]} />
+          <meshPhysicalMaterial color="#f59e0b" metalness={0.9} roughness={0.2} />
+        </mesh>
+      </group>
+
+      {/* Temple arms */}
+      <mesh position={[0.175, 0.005, -0.09]} rotation={[0, 0.16, 0]}>
+        <boxGeometry args={[0.01, 0.014, 0.18]} />
+        <meshPhysicalMaterial color="#1f2937" roughness={0.2} metalness={0.6} />
+      </mesh>
+      <mesh position={[-0.175, 0.005, -0.09]} rotation={[0, -0.16, 0]}>
+        <boxGeometry args={[0.01, 0.014, 0.18]} />
+        <meshPhysicalMaterial color="#1f2937" roughness={0.2} metalness={0.6} />
+      </mesh>
+    </group>
+  );
+}
+
+function CozyBlanket({ visible, pose }: { visible: boolean; pose?: SleepPose }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const scaleRef = useRef(0);
+
+  useFrame((state, rawDt) => {
+    if (!groupRef.current) return;
+    const dt = Math.min(rawDt, 0.05);
+    const target = visible ? 1 : 0;
+    scaleRef.current = THREE.MathUtils.lerp(scaleRef.current, target, 1 - Math.exp(-dt * 6.5));
+    const s = scaleRef.current;
+
+    // Gentle breathing rise and fall
+    const breath = visible ? Math.sin(state.clock.elapsedTime * 1.8) * 0.016 : 0;
+
+    groupRef.current.position.y = 0.44 + breath;
+    groupRef.current.scale.set(s, s * (1 + breath * 1.5), s);
+    groupRef.current.visible = s > 0.01;
+  });
+
+  const isProne = pose === 'prone';
+
+  return (
+    <group
+      ref={groupRef}
+      position={[0, 0.44, isProne ? -0.06 : -0.02]}
+      rotation={[isProne ? 0.08 : 0, 0, 0]}
+    >
+      {/* Main soft puffy blanket body */}
+      <RoundedBox
+        args={[0.88, 0.46, 0.82]}
+        radius={0.16}
+        smoothness={6}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial
+          color="#6ea4bf" // Soft cozy nordic pastel blue
+          emissive="#234557"
+          emissiveIntensity={0.35}
+          roughness={0.9}
+          metalness={0.05}
+        />
+      </RoundedBox>
+
+      {/* Turned-down plush hem / collar (cổ chăn gập bồng bềnh) */}
+      <group position={[0, 0.19, 0.32]} rotation={[0.12, 0, 0]}>
+        <RoundedBox args={[0.82, 0.12, 0.2]} radius={0.05} smoothness={4} castShadow>
+          <meshStandardMaterial
+            color="#fffdf0"
+            emissive="#fed7aa"
+            emissiveIntensity={0.25}
+            roughness={0.85}
+          />
+        </RoundedBox>
+        {/* Soft stitch accent stripe */}
+        <mesh position={[0, 0.062, 0]}>
+          <boxGeometry args={[0.76, 0.005, 0.02]} />
+          <meshBasicMaterial color="#d4a373" />
+        </mesh>
+      </group>
+
+      {/* Cute little sleeping star embroidery patch on the side */}
+      <mesh position={[0.28, 0.22, 0.1]} rotation={[-0.4, 0.2, 0]}>
+        <planeGeometry args={[0.13, 0.13]} />
+        <meshBasicMaterial color="#fef08a" />
+      </mesh>
+    </group>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Duck                                                                */
 /* ------------------------------------------------------------------ */
 
-export function Duck({ motion }: { motion: React.RefObject<{ moving: boolean }> }) {
+export type SleepPose = 'side' | 'prone';
+export type DuckSpot = 'floor' | 'beanbag' | 'sofa';
+
+export interface DuckMotion {
+  moving: boolean;
+  sleeping?: boolean;
+  lounging?: boolean;
+  sleepPose?: SleepPose;
+  spot?: DuckSpot;
+}
+
+export function Duck({
+  motion,
+  sleeping = false,
+  lounging = false,
+  sleepPose = 'side',
+}: {
+  motion: React.RefObject<DuckMotion>;
+  sleeping?: boolean;
+  lounging?: boolean;
+  sleepPose?: SleepPose;
+}) {
   const rig = useMemo(() => {
     const geo = buildDuckBodyGeometry();
     const mat = new THREE.MeshPhysicalMaterial({
@@ -455,6 +727,9 @@ export function Duck({ motion }: { motion: React.RefObject<{ moving: boolean }> 
     const dt = Math.min(rawDt, 0.05);
     const t = state.clock.elapsedTime;
     const moving = motion.current?.moving ?? false;
+    const isSleeping = motion.current?.sleeping ?? sleeping;
+    const isLounging = motion.current?.lounging ?? lounging;
+    const currentSleepPose = motion.current?.sleepPose ?? sleepPose ?? 'side';
     const q = performance.now() / 1000 - input.quackAt;
     const quacking = q >= 0 && q < 0.6;
     const k = (rate: number) => 1 - Math.exp(-dt * rate); // frame-rate independent smoothing
@@ -466,24 +741,57 @@ export function Duck({ motion }: { motion: React.RefObject<{ moving: boolean }> 
     }
     const ph = phase.current;
 
-    // Bob + quack hop
+    // Bob + quack hop + breathing
     const jp = quacking ? q / 0.6 : 1;
     const hop = quacking ? Math.sin(jp * Math.PI) * 0.55 : 0;
-    const bob = moving ? Math.abs(Math.sin(ph)) * 0.06 : Math.sin(t * 2) * 0.01;
+    let bob = 0;
+    if (isSleeping) {
+      bob = Math.sin(t * 1.8) * 0.016;
+    } else if (isLounging) {
+      bob = Math.sin(t * 1.4) * 0.012;
+    } else {
+      bob = moving ? Math.abs(Math.sin(ph)) * 0.06 : Math.sin(t * 2) * 0.01;
+    }
     duckY.current = hop + bob;
 
-    // Squash & stretch
+    // Squash & stretch (breathing)
     let sy = 1;
     if (quacking) sy = 1 + Math.cos(jp * Math.PI) * 0.18;
+    else if (isSleeping) sy = 1 + Math.sin(t * 1.8) * 0.035;
+    else if (isLounging) sy = 1 + Math.sin(t * 1.4) * 0.025;
     else if (moving) sy = 1 + Math.sin(ph * 2) * 0.035;
     else sy = 1 + Math.sin(t * 2.2) * 0.014;
     const sxz = 1 / Math.sqrt(sy); // volume preserving
 
     if (inner.current) {
-      inner.current.position.y = duckY.current;
-      inner.current.rotation.z = THREE.MathUtils.lerp(inner.current.rotation.z, moving ? Math.sin(ph) * 0.12 : 0, k(14));
-      inner.current.rotation.x = THREE.MathUtils.lerp(inner.current.rotation.x, moving ? 0.06 : 0, k(6));
-      inner.current.position.x = THREE.MathUtils.lerp(inner.current.position.x, moving ? Math.sin(ph) * 0.03 : 0, k(14));
+      if (isSleeping) {
+        if (currentSleepPose === 'prone') {
+          // Nằm sấp (Prone / Belly sleeper)
+          inner.current.position.y = THREE.MathUtils.lerp(inner.current.position.y, -0.12 + bob, k(10));
+          inner.current.rotation.x = THREE.MathUtils.lerp(inner.current.rotation.x, 0.16, k(10));
+          inner.current.rotation.z = THREE.MathUtils.lerp(inner.current.rotation.z, 0, k(10));
+          inner.current.position.x = THREE.MathUtils.lerp(inner.current.position.x, 0, k(10));
+        } else {
+          // Nằm nghiêng (Side sleeper)
+          inner.current.position.y = THREE.MathUtils.lerp(inner.current.position.y, -0.08 + bob, k(10));
+          inner.current.rotation.x = THREE.MathUtils.lerp(inner.current.rotation.x, 0.08, k(10));
+          inner.current.rotation.z = THREE.MathUtils.lerp(inner.current.rotation.z, 1.25, k(10));
+          inner.current.position.x = THREE.MathUtils.lerp(inner.current.position.x, 0, k(10));
+        }
+      } else if (isLounging) {
+        // Nằm ngửa sâu dưới lòng đệm ghế lười, ngả lưng tựa vào thành ghế phía sau
+        inner.current.position.y = THREE.MathUtils.lerp(inner.current.position.y, -0.06 + bob, k(10));
+        inner.current.rotation.x = THREE.MathUtils.lerp(inner.current.rotation.x, -0.62, k(10));
+        inner.current.rotation.z = THREE.MathUtils.lerp(inner.current.rotation.z, 0, k(10));
+        inner.current.position.x = THREE.MathUtils.lerp(inner.current.position.x, 0, k(10));
+        inner.current.position.z = THREE.MathUtils.lerp(inner.current.position.z, 0.08, k(10));
+      } else {
+        inner.current.position.y = duckY.current;
+        inner.current.rotation.z = THREE.MathUtils.lerp(inner.current.rotation.z, moving ? Math.sin(ph) * 0.12 : 0, k(14));
+        inner.current.rotation.x = THREE.MathUtils.lerp(inner.current.rotation.x, moving ? 0.06 : 0, k(6));
+        inner.current.position.x = THREE.MathUtils.lerp(inner.current.position.x, moving ? Math.sin(ph) * 0.03 : 0, k(14));
+        inner.current.position.z = THREE.MathUtils.lerp(inner.current.position.z, 0, k(10));
+      }
       inner.current.scale.set(0.96 * sxz, 0.96 * sy, 0.96 * sxz);
     }
 
@@ -495,6 +803,20 @@ export function Duck({ motion }: { motion: React.RefObject<{ moving: boolean }> 
     if (quacking) {
       hx = -0.4;
       hy = Math.sin(q * 30) * 0.08;
+    } else if (isSleeping) {
+      if (currentSleepPose === 'prone') {
+        hx = 0.16;
+        hz = 0.14;
+        hy = 0.05;
+      } else {
+        hx = 0.04;
+        hz = -0.18;
+        hy = 0;
+      }
+    } else if (isLounging) {
+      hx = 0.18;
+      hz = 0;
+      hy = Math.sin(t * 0.8) * 0.06;
     } else if (moving) {
       hz = -Math.sin(ph) * 0.09;
       hx = -0.2 + Math.sin(ph * 2) * 0.04;
@@ -512,14 +834,14 @@ export function Duck({ motion }: { motion: React.RefObject<{ moving: boolean }> 
 
     // Tail wag
     const tb = rig.tailBone;
-    const wag = moving ? Math.sin(ph) * 0.35 : t % 4 < 0.6 ? Math.sin(t * 22) * 0.25 : 0;
+    const wag = moving ? Math.sin(ph) * 0.35 : isSleeping ? 0 : t % 4 < 0.6 ? Math.sin(t * 22) * 0.25 : 0;
     tb.rotation.y = THREE.MathUtils.lerp(tb.rotation.y, wag, k(18));
     tb.rotation.x = THREE.MathUtils.lerp(tb.rotation.x, moving ? -0.12 : -0.04, k(6));
 
-    // Blink
-    const blink = t % 3.6 > 3.48 ? 0.1 : 1;
-    if (eyeL.current) eyeL.current.scale.y = THREE.MathUtils.lerp(eyeL.current.scale.y, blink, k(30));
-    if (eyeR.current) eyeR.current.scale.y = THREE.MathUtils.lerp(eyeR.current.scale.y, blink, k(30));
+    // Blink / Sleep / Relax
+    const blink = isSleeping ? 0.05 : isLounging ? 0.55 : t % 3.6 > 3.48 ? 0.1 : 1;
+    if (eyeL.current) eyeL.current.scale.y = THREE.MathUtils.lerp(eyeL.current.scale.y, blink, k(25));
+    if (eyeR.current) eyeR.current.scale.y = THREE.MathUtils.lerp(eyeR.current.scale.y, blink, k(25));
 
     // Beak
     if (lowerBeak.current) {
@@ -528,24 +850,96 @@ export function Duck({ motion }: { motion: React.RefObject<{ moving: boolean }> 
     }
 
     // Wings
-    const flap = quacking ? Math.abs(Math.sin(q * 42)) * 0.9 : moving ? Math.abs(Math.sin(ph * 2)) * 0.15 : Math.abs(Math.sin(t * 2.2)) * 0.03;
-    if (wingL.current) wingL.current.rotation.z = THREE.MathUtils.lerp(wingL.current.rotation.z, flap, k(30));
-    if (wingR.current) wingR.current.rotation.z = THREE.MathUtils.lerp(wingR.current.rotation.z, -flap, k(30));
+    let flapL = 0;
+    let flapR = 0;
+    if (quacking) {
+      const fl = Math.abs(Math.sin(q * 42)) * 0.9;
+      flapL = fl;
+      flapR = -fl;
+    } else if (isSleeping) {
+      flapL = 0.02;
+      flapR = -0.02;
+    } else if (isLounging) {
+      flapL = 0.62;
+      flapR = -0.62;
+    } else if (moving) {
+      const fl = Math.abs(Math.sin(ph * 2)) * 0.15;
+      flapL = fl;
+      flapR = -fl;
+    } else {
+      const fl = Math.abs(Math.sin(t * 2.2)) * 0.03;
+      flapL = fl;
+      flapR = -fl;
+    }
+    if (wingL.current) wingL.current.rotation.z = THREE.MathUtils.lerp(wingL.current.rotation.z, flapL, k(25));
+    if (wingR.current) wingR.current.rotation.z = THREE.MathUtils.lerp(wingR.current.rotation.z, flapR, k(25));
 
     // Feet
     if (footL.current && footR.current) {
-      const sL = moving ? Math.sin(ph) : 0;
-      footL.current.rotation.x = THREE.MathUtils.lerp(footL.current.rotation.x, sL * 0.6, k(20));
-      footR.current.rotation.x = THREE.MathUtils.lerp(footR.current.rotation.x, -sL * 0.6, k(20));
-      footL.current.position.y = THREE.MathUtils.lerp(footL.current.position.y, 0.16 + Math.max(0, sL) * 0.07, k(20));
-      footR.current.position.y = THREE.MathUtils.lerp(footR.current.position.y, 0.16 + Math.max(0, -sL) * 0.07, k(20));
+      if (isSleeping) {
+        if (currentSleepPose === 'prone') {
+          footL.current.rotation.x = THREE.MathUtils.lerp(footL.current.rotation.x, 0.45, k(12));
+          footR.current.rotation.x = THREE.MathUtils.lerp(footR.current.rotation.x, 0.45, k(12));
+          footL.current.position.y = THREE.MathUtils.lerp(footL.current.position.y, 0.06, k(12));
+          footR.current.position.y = THREE.MathUtils.lerp(footR.current.position.y, 0.06, k(12));
+        } else {
+          footL.current.rotation.x = THREE.MathUtils.lerp(footL.current.rotation.x, 0.35, k(12));
+          footR.current.rotation.x = THREE.MathUtils.lerp(footR.current.rotation.x, 0.35, k(12));
+          footL.current.position.y = THREE.MathUtils.lerp(footL.current.position.y, 0.08, k(12));
+          footR.current.position.y = THREE.MathUtils.lerp(footR.current.position.y, 0.08, k(12));
+        }
+        footL.current.position.x = THREE.MathUtils.lerp(footL.current.position.x, 0.15, k(15));
+        footR.current.position.x = THREE.MathUtils.lerp(footR.current.position.x, -0.15, k(15));
+        footL.current.position.z = THREE.MathUtils.lerp(footL.current.position.z, 0.04, k(15));
+        footR.current.position.z = THREE.MathUtils.lerp(footR.current.position.z, 0.04, k(15));
+        footL.current.rotation.z = THREE.MathUtils.lerp(footL.current.rotation.z, 0, k(15));
+        footR.current.rotation.z = THREE.MathUtils.lerp(footR.current.rotation.z, 0, k(15));
+        footL.current.rotation.y = THREE.MathUtils.lerp(footL.current.rotation.y, 0, k(15));
+        footR.current.rotation.y = THREE.MathUtils.lerp(footR.current.rotation.y, 0, k(15));
+      } else if (isLounging) {
+        // Nằm ngửa dang rộng hai chân vui nhộn trên mặt ghế lười (man-spreading / starfish)
+        footL.current.position.x = THREE.MathUtils.lerp(footL.current.position.x, 0.42, k(15));
+        footR.current.position.x = THREE.MathUtils.lerp(footR.current.position.x, -0.42, k(15));
+        footL.current.position.y = THREE.MathUtils.lerp(footL.current.position.y, 0.28, k(15));
+        footR.current.position.y = THREE.MathUtils.lerp(footR.current.position.y, 0.28, k(15));
+        footL.current.position.z = THREE.MathUtils.lerp(footL.current.position.z, 0.36, k(15));
+        footR.current.position.z = THREE.MathUtils.lerp(footR.current.position.z, 0.36, k(15));
+
+        footL.current.rotation.x = THREE.MathUtils.lerp(footL.current.rotation.x, -0.95, k(15));
+        footR.current.rotation.x = THREE.MathUtils.lerp(footR.current.rotation.x, -0.95, k(15));
+        footL.current.rotation.z = THREE.MathUtils.lerp(footL.current.rotation.z, 0.82, k(15));  // Dang rộng sang trái
+        footR.current.rotation.z = THREE.MathUtils.lerp(footR.current.rotation.z, -0.82, k(15)); // Dang rộng sang phải
+        footL.current.rotation.y = THREE.MathUtils.lerp(footL.current.rotation.y, -0.5, k(15));   // Bàn chân mở xòe ra
+        footR.current.rotation.y = THREE.MathUtils.lerp(footR.current.rotation.y, 0.5, k(15));
+      } else {
+        const sL = moving ? Math.sin(ph) : 0;
+        footL.current.rotation.x = THREE.MathUtils.lerp(footL.current.rotation.x, sL * 0.6, k(20));
+        footR.current.rotation.x = THREE.MathUtils.lerp(footR.current.rotation.x, -sL * 0.6, k(20));
+        footL.current.position.y = THREE.MathUtils.lerp(footL.current.position.y, 0.16 + Math.max(0, sL) * 0.07, k(20));
+        footR.current.position.y = THREE.MathUtils.lerp(footR.current.position.y, 0.16 + Math.max(0, -sL) * 0.07, k(20));
+        footL.current.position.x = THREE.MathUtils.lerp(footL.current.position.x, 0.15, k(15));
+        footR.current.position.x = THREE.MathUtils.lerp(footR.current.position.x, -0.15, k(15));
+        footL.current.position.z = THREE.MathUtils.lerp(footL.current.position.z, 0.04, k(15));
+        footR.current.position.z = THREE.MathUtils.lerp(footR.current.position.z, 0.04, k(15));
+        footL.current.rotation.z = THREE.MathUtils.lerp(footL.current.rotation.z, 0, k(15));
+        footR.current.rotation.z = THREE.MathUtils.lerp(footR.current.rotation.z, 0, k(15));
+        footL.current.rotation.y = THREE.MathUtils.lerp(footL.current.rotation.y, 0, k(15));
+        footR.current.rotation.y = THREE.MathUtils.lerp(footR.current.rotation.y, 0, k(15));
+      }
     }
   });
+
+  const isSleeping = motion.current?.sleeping ?? sleeping;
+  const isLounging = motion.current?.lounging ?? lounging;
+  const currentSleepPose = motion.current?.sleepPose ?? sleepPose ?? 'side';
 
   return (
     <>
       <DuckBlobShadow duckY={duckY} />
       <QuackBubble />
+      <SleepZzzBubble sleeping={isSleeping} />
+      <RelaxBlissBubble lounging={isLounging} sleeping={isSleeping} />
+      <CozyBlanket visible={Boolean(isSleeping)} pose={currentSleepPose} />
 
       <group ref={inner} scale={0.96}>
         {/* Seamless skinned body + neck + head + tail */}
@@ -553,6 +947,7 @@ export function Duck({ motion }: { motion: React.RefObject<{ moving: boolean }> 
 
         {/* Face / accessories follow the head bone */}
         <group ref={headGroup} position={HEAD_PIVOT}>
+          <Sunglasses visible={Boolean(isLounging && !isSleeping)} />
           {/* Eyes */}
           {[
             { ref: eyeL, spot: assets.eyeL },

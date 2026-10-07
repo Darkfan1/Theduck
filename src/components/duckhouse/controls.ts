@@ -31,9 +31,15 @@ export const input = {
   joyY: 0,
   /** performance.now()/1000 of the last quack (drives jump animation) */
   quackAt: -10,
+  /** Timestamp lần tương tác cuối cùng (dùng để phát hiện idle khi ngủ đêm) */
+  lastInteractAt: performance.now(),
+  notifyInteract() {
+    this.lastInteractAt = performance.now();
+  },
 
   onKeyDown(dir: MoveDir, code?: string, key?: string) {
     const now = performance.now();
+    this.lastInteractAt = now;
     this.lastDown[dir] = now;
     this.dirs.add(dir);
 
