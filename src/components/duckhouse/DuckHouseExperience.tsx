@@ -21,6 +21,14 @@ const HouseScene = dynamic(() => import('./HouseScene'), {
   ),
 });
 
+const STATION_GRADIENTS: Record<string, string> = {
+  overview: 'linear-gradient(145deg, #fbbf24 0%, #d97706 100%)',
+  experience: 'linear-gradient(145deg, #38bdf8 0%, #0284c7 100%)',
+  skills: 'linear-gradient(145deg, #c084fc 0%, #7c3aed 100%)',
+  projects: 'linear-gradient(145deg, #34d399 0%, #059669 100%)',
+  contact: 'linear-gradient(145deg, #f472b6 0%, #db2777 100%)',
+};
+
 function Joystick() {
   const base = useRef<HTMLDivElement>(null);
   const pointer = useRef<number | null>(null);
@@ -137,6 +145,7 @@ export default function DuckHouseExperience() {
     input.joyY = 0;
     nav.target = null;
     nav.pending = null;
+    nav.teleport = getStation(key).interact;
     setOpen(key);
     setWelcome(false);
     duckAudio.playFeedChime();
@@ -323,7 +332,7 @@ export default function DuckHouseExperience() {
             </p>
           </div>
         </div>
-        <div className={styles.topActions}>
+        <div className={`${styles.topActions} ${open ? styles.topActionsHidden : ''}`}>
           {/* Real-time Environment Time Widget */}
           <div className={styles.timeWidgetWrap} ref={timeMenuRef}>
             <button
@@ -443,24 +452,73 @@ export default function DuckHouseExperience() {
         </button>
       )}
 
-      {/* Station dock */}
-      <nav className={styles.dock} aria-label="Các góc trong nhà vịt">
+      {/* Station dock (MacOS style frosted glass) */}
+      <nav className={`${styles.dock} ${open ? styles.dockHidden : ''}`} aria-label="Các góc trong nhà vịt">
         {STATIONS.map((s) => (
           <button
             key={s.key}
             className={`${styles.dockItem} ${nearby === s.key || open === s.key ? styles.dockItemActive : ''}`}
-            style={{ '--accent': s.color } as React.CSSProperties}
+            style={{
+              '--accent': s.color,
+              '--dock-gradient': STATION_GRADIENTS[s.key] || s.color,
+            } as React.CSSProperties}
             onClick={() => (open ? openStation(s.key) : walkTo(s.key))}
-            title={`${s.place} — ${s.label}`}
+            aria-label={`${s.label} (${s.place})`}
           >
-            <span className={styles.dockEmoji}>{s.emoji}</span>
+            {/* MacOS Tooltip */}
+            <div className={styles.dockTooltip}>
+              <span className={styles.dockTooltipTitle}>{s.label}</span>
+              <span className={styles.dockTooltipSub}>{s.place}</span>
+            </div>
+
+            {/* MacOS App Squircle */}
+            <div className={styles.dockIconTile}>
+              <span className={styles.dockEmoji}>{s.emoji}</span>
+              <span className={styles.dockIconGloss} />
+            </div>
+
+            {/* Label */}
             <span className={styles.dockLabel}>{s.label}</span>
+
+            {/* MacOS Running Indicator Dot */}
+            <span className={styles.dockDot} />
           </button>
         ))}
+
+        {/* MacOS Dock Divider */}
+        <div className={styles.dockDivider} />
+
+        {/* Mini Game App */}
+        <button
+          className={`${styles.dockItem} ${gardenGame ? styles.dockItemActive : ''}`}
+          style={{
+            '--accent': '#f43f5e',
+            '--dock-gradient': 'linear-gradient(145deg, #fb7185 0%, #e11d48 100%)',
+          } as React.CSSProperties}
+          onClick={() => {
+            input.clear();
+            setGardenGame(true);
+            duckAudio.playJumpSound();
+          }}
+          aria-label="Vườn Hoa (Mini game)"
+        >
+          <div className={styles.dockTooltip}>
+            <span className={styles.dockTooltipTitle}>Vườn Hoa</span>
+            <span className={styles.dockTooltipSub}>Mini Game</span>
+          </div>
+
+          <div className={styles.dockIconTile}>
+            <span className={styles.dockEmoji}>🎮</span>
+            <span className={styles.dockIconGloss} />
+          </div>
+
+          <span className={styles.dockLabel}>Mini Game</span>
+          <span className={styles.dockDot} />
+        </button>
       </nav>
 
       {/* Controls hint (desktop) */}
-      {!isTouch && (
+      {!isTouch && !open && (
         <div className={styles.hint}>
           <span className={styles.hintCluster}>
             <button
@@ -566,7 +624,10 @@ export default function DuckHouseExperience() {
             <span className={styles.hintLabel}>quác</span>
           </span>
           <span className={styles.hintClickNote}>
-            {nearby ? '🖱️ cuộn chuột để về chế độ thường' : '🖱️ click sàn để đi tới'}
+            <span>🖱️</span>
+            <span>
+              <strong className={styles.hintHighlight}>đè chuột giữa</strong> chỉnh góc · <strong className={styles.hintHighlight}>cuộn chuột</strong> thu phóng · <strong className={styles.hintHighlight}>click sàn</strong> đi tới
+            </span>
           </span>
         </div>
       )}

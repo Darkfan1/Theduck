@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
-import { Billboard, RoundedBox } from '@react-three/drei';
+import { Billboard, RoundedBox, Html, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { duckAudio } from '@/utils/duckAudio';
 import {
@@ -64,39 +64,39 @@ interface StationCameraPreset {
 
 const STATION_CAMERAS: Record<StationKey, StationCameraPreset> = {
   overview: {
-    // Góc 01 · Phòng khách & Sofa (khung cảnh dạt sang nửa bên phải)
+    // Góc 01 · Phòng khách & Sofa (khung cảnh dạt sang nửa bên trái, thu nhỏ cảnh vật hợp lý)
     pos: [-4.2, 3.8, 0.4],
     look: [-4.5, 1.2, -3.2],
-    openPos: [-4.6, 2.7, 0.5],
-    openLook: [-6.4, 1.1, -4.5],
+    openPos: [-4.7, 2.75, 1.7],
+    openLook: [-3.3, 1.25, -4.5],
   },
   experience: {
-    // Góc 02 · Xưởng in bao bì (khung cảnh dạt sang nửa bên phải)
+    // Góc 02 · Xưởng in bao bì (khung cảnh dạt sang nửa bên trái)
     pos: [-3.8, 3.6, 5.4],
     look: [-5.8, 1.2, 2.0],
-    openPos: [-4.0, 3.4, 5.2],
-    openLook: [-6.6, 1.1, 1.6],
+    openPos: [-4.6, 3.4, 5.2],
+    openLook: [-4.2, 1.1, 1.8],
   },
   skills: {
-    // Góc 03 · Bàn lab công nghệ & Màn hình code (khung cảnh dạt sang nửa bên phải)
-    pos: [3.8, 3.6, -1.0],
-    look: [5.0, 1.4, -4.4],
-    openPos: [3.2, 3.4, -1.0],
-    openLook: [3.8, 1.3, -4.6],
+    // Góc 03 · Bàn lab công nghệ quay vào tường bên phải (khung cảnh dạt sang nửa bên trái)
+    pos: [3.0, 3.4, -1.8],
+    look: [6.6, 1.3, -3.2],
+    openPos: [3.2, 3.1, -1.6],
+    openLook: [7.2, 1.2, -3.0],
   },
   projects: {
-    // Góc 04 · Kệ sách dự án (khung cảnh dạt sang nửa bên phải)
+    // Góc 04 · Kệ sách dự án (khung cảnh dạt sang nửa bên trái)
     pos: [3.8, 3.8, 5.2],
     look: [6.5, 1.6, 1.8],
-    openPos: [3.4, 3.6, 5.0],
-    openLook: [5.2, 1.5, 1.8],
+    openPos: [4.0, 3.6, 5.0],
+    openLook: [7.2, 1.5, 1.8],
   },
   contact: {
-    // Góc 05 · Hòm thư & Cửa ra vào (khung cảnh dạt sang nửa bên phải)
-    pos: [1.2, 3.2, -1.6],
-    look: [1.4, 1.4, -5.0],
-    openPos: [0.6, 3.0, -1.6],
-    openLook: [0.8, 1.3, -5.0],
+    // Góc 05 · Bàn console điện thoại & lời nhắn bên phải cửa chính (khung cảnh dạt sang nửa bên trái)
+    pos: [1.4, 3.1, -1.8],
+    look: [1.5, 1.3, -5.1],
+    openPos: [0.9, 2.9, -1.8],
+    openLook: [2.1, 1.2, -5.1],
   },
 };
 
@@ -134,6 +134,8 @@ interface BoxProps {
   emissiveIntensity?: number;
   roughness?: number;
   metalness?: number;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
 }
 
 function Box({
@@ -145,6 +147,8 @@ function Box({
   emissiveIntensity = 0,
   roughness = 0.8,
   metalness = 0,
+  clearcoat = 0,
+  clearcoatRoughness = 0.2,
 }: BoxProps) {
   // Bevelled edges catch highlights and kill the hard "lego block" look
   const radius = Math.min(0.04, Math.min(size[0], size[1], size[2]) * 0.3);
@@ -158,13 +162,25 @@ function Box({
       castShadow
       receiveShadow
     >
-      <meshStandardMaterial
-        color={color}
-        emissive={emissive ?? '#000000'}
-        emissiveIntensity={emissiveIntensity}
-        roughness={roughness}
-        metalness={metalness}
-      />
+      {clearcoat > 0 ? (
+        <meshPhysicalMaterial
+          color={color}
+          emissive={emissive ?? '#000000'}
+          emissiveIntensity={emissiveIntensity}
+          roughness={roughness}
+          metalness={metalness}
+          clearcoat={clearcoat}
+          clearcoatRoughness={clearcoatRoughness}
+        />
+      ) : (
+        <meshStandardMaterial
+          color={color}
+          emissive={emissive ?? '#000000'}
+          emissiveIntensity={emissiveIntensity}
+          roughness={roughness}
+          metalness={metalness}
+        />
+      )}
     </RoundedBox>
   );
 }
@@ -176,18 +192,46 @@ interface CylProps {
   rotation?: V3;
   emissive?: string;
   emissiveIntensity?: number;
+  metalness?: number;
+  roughness?: number;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
 }
 
-function Cyl({ position, args, color, rotation, emissive, emissiveIntensity = 0 }: CylProps) {
+function Cyl({
+  position,
+  args,
+  color,
+  rotation,
+  emissive,
+  emissiveIntensity = 0,
+  metalness,
+  roughness,
+  clearcoat = 0,
+  clearcoatRoughness = 0.2,
+}: CylProps) {
   return (
     <mesh position={position} rotation={rotation} castShadow receiveShadow>
       <cylinderGeometry args={[args[0], args[1], args[2], args[3] ?? 24]} />
-      <meshStandardMaterial
-        color={color}
-        emissive={emissive ?? '#000000'}
-        emissiveIntensity={emissiveIntensity}
-        roughness={0.7}
-      />
+      {clearcoat > 0 ? (
+        <meshPhysicalMaterial
+          color={color}
+          emissive={emissive ?? '#000000'}
+          emissiveIntensity={emissiveIntensity}
+          metalness={metalness ?? 0}
+          roughness={roughness ?? 0.7}
+          clearcoat={clearcoat}
+          clearcoatRoughness={clearcoatRoughness}
+        />
+      ) : (
+        <meshStandardMaterial
+          color={color}
+          emissive={emissive ?? '#000000'}
+          emissiveIntensity={emissiveIntensity}
+          metalness={metalness ?? 0}
+          roughness={roughness ?? 0.7}
+        />
+      )}
     </mesh>
   );
 }
@@ -213,39 +257,42 @@ function ShutterPanel({
   const width = 0.81;
   const height = 1.22;
   const pivotX = side === 'left' ? -0.8 : 0.8;
-  const rotY = isNight ? 0 : side === 'left' ? -Math.PI * 0.44 : Math.PI * 0.44;
+  // Cửa sổ mở ra ngoài (về hướng -Z, ngoài trời):
+  // Cánh trái quay mở ra ngoài: góc dương (+rot)
+  // Cánh phải quay mở ra ngoài: góc âm (-rot)
+  const rotY = isNight ? 0 : side === 'left' ? Math.PI * 0.48 : -Math.PI * 0.48;
   const panelCenterX = side === 'left' ? width / 2 : -width / 2;
   const slats = useMemo(() => Array.from({ length: 9 }, (_, i) => -0.42 + i * 0.1), []);
 
   return (
-    <group position={[pivotX, 0, 0.08]} rotation={[0, rotY, 0]}>
+    <group position={[pivotX, 0, -0.16]} rotation={[0, rotY, 0]}>
       <group position={[panelCenterX, 0, 0]}>
-        {/* Outer wood frame */}
+        {/* Khung gỗ cánh cửa chớp */}
         <Box position={[0, 0, 0]} size={[width, height, 0.04]} color="#3e2723" roughness={0.7} />
-        {/* Recessed louver board */}
-        <Box position={[0, 0, 0.006]} size={[width - 0.1, height - 0.1, 0.02]} color="#4e342e" roughness={0.8} />
-        {/* Horizontal louvers (nan chớp gỗ) */}
+        {/* Tấm nền nan chớp */}
+        <Box position={[0, 0, 0.004]} size={[width - 0.1, height - 0.1, 0.02]} color="#4e342e" roughness={0.8} />
+        {/* Nan chớp gỗ đón gió và ánh sáng */}
         {slats.map((sy, idx) => (
-          <mesh key={idx} position={[0, sy, 0.016]} rotation={[-0.2, 0, 0]}>
+          <mesh key={idx} position={[0, sy, 0.012]} rotation={[-0.2, 0, 0]}>
             <boxGeometry args={[width - 0.12, 0.065, 0.012]} />
             <meshStandardMaterial color="#5d4037" roughness={0.8} />
           </mesh>
         ))}
-        {/* Brass corner brackets */}
+        {/* Bản lề & góc gia cố kim loại vàng đồng */}
         {[
           [-width / 2 + 0.06, height / 2 - 0.06],
           [width / 2 - 0.06, height / 2 - 0.06],
           [-width / 2 + 0.06, -height / 2 + 0.06],
           [width / 2 - 0.06, -height / 2 + 0.06],
         ].map(([bx, by], i) => (
-          <mesh key={i} position={[bx, by, 0.023]}>
+          <mesh key={i} position={[bx, by, 0.022]}>
             <planeGeometry args={[0.045, 0.045]} />
             <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.3} />
           </mesh>
         ))}
-        {/* Center brass slide lock when closed at night */}
+        {/* Chốt khóa đồng khi đóng kín ban đêm */}
         {isNight && side === 'left' && (
-          <group position={[width / 2 - 0.02, 0, 0.028]}>
+          <group position={[width / 2 - 0.02, 0, 0.026]}>
             <Box position={[0, 0, 0]} size={[0.09, 0.04, 0.025]} color="#fbbf24" metalness={0.85} roughness={0.25} />
             <mesh position={[0.035, 0, 0.016]}>
               <sphereGeometry args={[0.024, 12, 12]} />
@@ -272,35 +319,58 @@ function WindowFrame({ x, timeConfig }: { x: number; timeConfig: TimeConfig }) {
   );
 
   return (
-    <group position={[x, 2.3, -5.97]}>
-      <mesh>
-        <boxGeometry args={[1.8, 1.4, 0.08]} />
+    <group position={[x, 2.3, -6.0]}>
+      {/* 1. Nẹp viền gỗ mặt trong nhà (Interior Architrave / Casing) */}
+      <Box position={[0, 0.68, 0.03]} size={[1.86, 0.08, 0.06]} color="#fffaf0" />
+      <Box position={[-0.88, 0, 0.03]} size={[0.08, 1.36, 0.06]} color="#fffaf0" />
+      <Box position={[0.88, 0, 0.03]} size={[0.08, 1.36, 0.06]} color="#fffaf0" />
+      {/* Bậu cửa sổ trong phòng nhô ra đẹp mắt */}
+      <Box position={[0, -0.72, 0.08]} size={[2.0, 0.08, 0.22]} color="#e9d5b5" />
+
+      {/* 2. Bốn vách hộc cửa sổ (Window reveal / jambs) tạo chiều sâu khoét vào tường */}
+      <Box position={[-0.84, 0, -0.15]} size={[0.04, 1.3, 0.32]} color="#fffaf0" />
+      <Box position={[0.84, 0, -0.15]} size={[0.04, 1.3, 0.32]} color="#fffaf0" />
+      <Box position={[0, 0.64, -0.15]} size={[1.68, 0.04, 0.32]} color="#fffaf0" />
+      <Box position={[0, -0.64, -0.15]} size={[1.68, 0.04, 0.32]} color="#f0e6d6" />
+
+      {/* 3. Khung kính & Nan chia ô (Window mullions) */}
+      <mesh position={[0, 0, -0.06]}>
+        <planeGeometry args={[1.64, 1.24]} />
+        <meshStandardMaterial
+          color="#bae6fd"
+          transparent
+          opacity={0.2}
+          roughness={0.1}
+        />
+      </mesh>
+      <mesh position={[0, 0, -0.055]}>
+        <boxGeometry args={[0.05, 1.24, 0.025]} />
         <meshStandardMaterial color="#fffaf0" />
       </mesh>
-      {/* Sky glass pane */}
-      <mesh position={[0, 0, 0.05]}>
-        <planeGeometry args={[1.6, 1.2]} />
+      <mesh position={[0, 0, -0.055]}>
+        <boxGeometry args={[1.64, 0.05, 0.025]} />
+        <meshStandardMaterial color="#fffaf0" />
+      </mesh>
+
+      {/* 4. Hai cánh cửa chớp gỗ: Mở hướng RA NGOÀI TRỜI (hướng -Z) khi ban ngày, khép kín khi ban đêm */}
+      <ShutterPanel side="left" isNight={timeConfig.isNight} />
+      <ShutterPanel side="right" isNight={timeConfig.isNight} />
+
+      {/* 5. Tấm nền bầu trời ngoài trời (Outdoor Sky plane & Atmospheric elements) */}
+      <mesh position={[0, 0, -0.34]}>
+        <planeGeometry args={[2.2, 1.5]} />
         <meshStandardMaterial
           color={timeConfig.skyColor}
           emissive={timeConfig.skyEmissive}
           emissiveIntensity={timeConfig.skyEmissiveIntensity}
         />
       </mesh>
-      {/* Window mullions */}
-      <mesh position={[0, 0, 0.07]}>
-        <boxGeometry args={[0.06, 1.2, 0.03]} />
-        <meshStandardMaterial color="#fffaf0" />
-      </mesh>
-      <mesh position={[0, 0, 0.07]}>
-        <boxGeometry args={[1.6, 0.06, 0.03]} />
-        <meshStandardMaterial color="#fffaf0" />
-      </mesh>
 
-      {/* Sky elements based on time */}
+      {/* Các yếu tố bầu trời bên ngoài */}
       {timeConfig.isNight ? (
         <>
-          {/* Glowing Crescent Moon */}
-          <group position={[0.34, 0.28, 0.06]}>
+          {/* Trăng khuyết lung linh ngoài trời */}
+          <group position={[0.34, 0.28, -0.33]}>
             <mesh>
               <circleGeometry args={[0.16, 24]} />
               <meshBasicMaterial color="#fef08a" />
@@ -310,9 +380,9 @@ function WindowFrame({ x, timeConfig }: { x: number; timeConfig: TimeConfig }) {
               <meshBasicMaterial color={timeConfig.skyColor} />
             </mesh>
           </group>
-          {/* Twinkling stars */}
+          {/* Những vì sao lấp lánh ngoài trời */}
           {stars.map((st, i) => (
-            <mesh key={i} position={[st.x, st.y, 0.06]}>
+            <mesh key={i} position={[st.x, st.y, -0.33]}>
               <circleGeometry args={[st.s, 10]} />
               <meshBasicMaterial color="#ffffff" />
             </mesh>
@@ -320,37 +390,30 @@ function WindowFrame({ x, timeConfig }: { x: number; timeConfig: TimeConfig }) {
         </>
       ) : (
         <>
-          {/* Morning / Sunset sun */}
+          {/* Mặt trời ban ngày / hoàng hôn ngoài trời */}
           {timeConfig.phase === 'morning' && (
-            <mesh position={[-0.45, 0.15, 0.055]}>
+            <mesh position={[-0.45, 0.15, -0.33]}>
               <circleGeometry args={[0.18, 24]} />
               <meshBasicMaterial color="#fef08a" />
             </mesh>
           )}
           {timeConfig.phase === 'sunset' && (
-            <mesh position={[-0.35, 0.02, 0.055]}>
+            <mesh position={[-0.35, 0.02, -0.33]}>
               <circleGeometry args={[0.22, 24]} />
               <meshBasicMaterial color="#fb923c" />
             </mesh>
           )}
-          {/* Fluffy clouds */}
-          <mesh position={[-0.35, 0.25, 0.06]}>
+          {/* Mây trắng bồng bềnh ngoài trời */}
+          <mesh position={[-0.35, 0.25, -0.33]}>
             <circleGeometry args={[0.13, 20]} />
             <meshBasicMaterial color="#ffffff" />
           </mesh>
-          <mesh position={[-0.18, 0.28, 0.06]}>
+          <mesh position={[-0.18, 0.28, -0.33]}>
             <circleGeometry args={[0.17, 20]} />
             <meshBasicMaterial color="#ffffff" />
           </mesh>
         </>
       )}
-
-      {/* Pair of wooden shutters: closed tightly at night, opened wide in day */}
-      <ShutterPanel side="left" isNight={timeConfig.isNight} />
-      <ShutterPanel side="right" isNight={timeConfig.isNight} />
-
-      {/* sill */}
-      <Box position={[0, -0.78, 0.12]} size={[2, 0.08, 0.3]} color="#e9d5b5" />
     </group>
   );
 }
@@ -517,53 +580,684 @@ function RealisticPlant({
 }
 
 function WallSign() {
-  const tex = useMemo(() => {
-    if (typeof document === 'undefined') return null;
+  const { diffuseTex, bumpTex } = useMemo(() => {
+    if (typeof document === 'undefined') return { diffuseTex: null, bumpTex: null };
+
+    const W = 2048;
+    const H = 512;
+
+    // Helper: Rounded rectangle path
+    const drawRoundRect = (
+      c: CanvasRenderingContext2D,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      r: number
+    ) => {
+      c.beginPath();
+      c.moveTo(x + r, y);
+      c.arcTo(x + w, y, x + w, y + h, r);
+      c.arcTo(x + w, y + h, x, y + h, r);
+      c.arcTo(x, y + h, x, y, r);
+      c.arcTo(x, y, x + w, y, r);
+      c.closePath();
+    };
+
+    // Helper: Draw stylized carved duck crest
+    const drawDuckCrest = (c: CanvasRenderingContext2D, cx: number, cy: number, scale: number) => {
+      c.save();
+      c.translate(cx, cy);
+      c.scale(scale, scale);
+
+      // Duck silhouette path
+      c.beginPath();
+      c.moveTo(-28, 12);
+      c.bezierCurveTo(-28, -14, -12, -26, -2, -30);
+      c.bezierCurveTo(8, -40, 24, -38, 30, -28);
+      c.bezierCurveTo(36, -28, 48, -24, 52, -21); // mỏ vịt trên
+      c.bezierCurveTo(50, -17, 40, -15, 32, -16); // mỏ vịt dưới
+      c.bezierCurveTo(28, -6, 20, 6, 10, 11);
+      c.bezierCurveTo(22, 15, 38, 14, 46, 6); // đuôi vịt
+      c.bezierCurveTo(42, 19, 28, 26, 12, 27);
+      c.bezierCurveTo(-4, 28, -20, 26, -28, 12);
+      c.closePath();
+      c.restore();
+    };
+
+    // Helper: Draw artisan carved laurel branch
+    const drawLaurelBranch = (
+      c: CanvasRenderingContext2D,
+      startX: number,
+      startY: number,
+      dir: number
+    ) => {
+      c.save();
+      c.beginPath();
+      c.moveTo(startX, startY);
+      c.bezierCurveTo(
+        startX + dir * 60,
+        startY - 8,
+        startX + dir * 130,
+        startY + 4,
+        startX + dir * 180,
+        startY - 6
+      );
+      c.stroke();
+
+      for (let i = 1; i <= 6; i++) {
+        const t = i / 7;
+        const lx = startX + dir * (t * 180);
+        const ly = startY + (Math.sin(t * Math.PI) * -8) + (i % 2 === 0 ? 3 : -3);
+        const leafAngle = (dir * 0.45) + (i % 2 === 0 ? 0.4 : -0.4);
+
+        c.save();
+        c.translate(lx, ly);
+        c.rotate(leafAngle);
+        c.beginPath();
+        c.ellipse(0, 0, 14, 6, 0, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+        c.restore();
+      }
+      c.restore();
+    };
+
+    // Helper: Draw flanking carved flourishes (chạm trổ mộc hai bên)
+    const drawSideFlourish = (
+      c: CanvasRenderingContext2D,
+      centerX: number,
+      centerY: number,
+      dir: number
+    ) => {
+      c.save();
+      c.translate(centerX, centerY);
+      c.scale(dir, 1);
+
+      // Main curved acanthus vine
+      c.beginPath();
+      c.moveTo(-180, 0);
+      c.bezierCurveTo(-120, -35, -40, -45, 40, -15);
+      c.bezierCurveTo(100, 8, 140, 2, 170, -20);
+      c.stroke();
+
+      // Lower counter-curve
+      c.beginPath();
+      c.moveTo(-140, 10);
+      c.bezierCurveTo(-80, 35, 10, 40, 90, 15);
+      c.bezierCurveTo(130, 2, 150, 18, 160, 28);
+      c.stroke();
+
+      // Leaf buds along vine
+      const buds = [
+        { x: -90, y: -25, a: -0.6, s: 13 },
+        { x: -20, y: -30, a: -0.3, s: 15 },
+        { x: 50, y: -8, a: 0.4, s: 14 },
+        { x: 120, y: 4, a: -0.5, s: 12 },
+        { x: -40, y: 25, a: 0.5, s: 13 },
+        { x: 40, y: 22, a: 0.2, s: 14 },
+      ];
+      buds.forEach(({ x, y, a, s }) => {
+        c.save();
+        c.translate(x, y);
+        c.rotate(a);
+        c.beginPath();
+        c.ellipse(0, 0, s, s * 0.45, 0, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+        c.restore();
+      });
+
+      c.restore();
+    };
+
+    /* ------------------------------------------------------------- */
+    /* 1. DIFFUSE TEXTURE CANVAS (Mặt gỗ tự nhiên + Chữ điêu khắc)   */
+    /* ------------------------------------------------------------- */
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 128;
+    canvas.width = W;
+    canvas.height = H;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.clearRect(0, 0, 512, 128);
+    if (!ctx) return { diffuseTex: null, bumpTex: null };
 
-    const x = 16, y = 16, w = 480, h = 96, r = 48;
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
+    // A. Base rich warm wood plank gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0, '#2e1509');
+    bgGrad.addColorStop(0.12, '#3e2010');
+    bgGrad.addColorStop(0.35, '#522c17');
+    bgGrad.addColorStop(0.68, '#462413');
+    bgGrad.addColorStop(0.88, '#391a0b');
+    bgGrad.addColorStop(1, '#251006');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
 
-    ctx.fillStyle = 'rgba(43, 26, 14, 0.94)';
-    ctx.fill();
+    // B. Natural undulating wood grain streaks
+    for (let i = 0; i < 200; i++) {
+      const yBase = (i / 200) * H;
+      const freq1 = 0.0022 + ((i * 19) % 11) * 0.0003;
+      const freq2 = 0.0065 + ((i * 31) % 13) * 0.0004;
+      const amp1 = 5 + (i % 8) * 2.5;
+      const amp2 = 2.5 + (i % 5);
+      const phase = (i * 57) % 200;
+
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 16) {
+        const y = yBase + Math.sin(x * freq1 + phase) * amp1 + Math.cos(x * freq2 + phase * 0.6) * amp2;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      const isDark = i % 3 !== 0;
+      const alpha = 0.035 + (i % 6) * 0.015;
+      ctx.strokeStyle = isDark ? `rgba(18, 8, 3, ${alpha})` : `rgba(180, 110, 58, ${alpha * 0.8})`;
+      ctx.lineWidth = 1 + (i % 4) * 0.8;
+      ctx.stroke();
+    }
+
+    // Natural wood knots
+    const drawKnot = (kx: number, ky: number, maxR: number) => {
+      for (let r = 8; r <= maxR; r += 7) {
+        ctx.beginPath();
+        ctx.ellipse(kx, ky, r * 1.8, r * 0.75, 0.08, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(22, 9, 4, ${0.12 - (r / maxR) * 0.08})`;
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+      }
+    };
+    drawKnot(1740, 190, 85);
+    drawKnot(310, 340, 65);
+
+    // Perimeter antique patina vignette
+    const vigGrad = ctx.createRadialGradient(W / 2, H / 2, 600, W / 2, H / 2, 1150);
+    vigGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vigGrad.addColorStop(1, 'rgba(14, 5, 2, 0.68)');
+    ctx.fillStyle = vigGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // C. Carved Double Border Grooves (Rãnh soi gỗ bo viền kép)
+    const padOuter = 26;
+    const rOuter = 26;
+    // Recessed dark groove shadow (up-left)
+    ctx.save();
+    ctx.shadowColor = 'rgba(8, 3, 1, 0.95)';
+    ctx.shadowBlur = 9;
+    ctx.shadowOffsetX = -3;
+    ctx.shadowOffsetY = -3;
+    drawRoundRect(ctx, padOuter, padOuter, W - padOuter * 2, H - padOuter * 2, rOuter);
     ctx.lineWidth = 6;
-    ctx.strokeStyle = '#d97706';
+    ctx.strokeStyle = '#150702';
+    ctx.stroke();
+    ctx.restore();
+
+    // Groove highlight rim (down-right)
+    drawRoundRect(ctx, padOuter + 2, padOuter + 2, W - (padOuter + 2) * 2, H - (padOuter + 2) * 2, rOuter);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255, 235, 175, 0.35)';
     ctx.stroke();
 
-    ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#fef3c7';
+    // Inlaid gold fillet
+    drawRoundRect(ctx, padOuter, padOuter, W - padOuter * 2, H - padOuter * 2, rOuter);
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(217, 119, 6, 0.75)';
+    ctx.stroke();
+
+    // Inner fine carved groove
+    const padInner = 46;
+    const rInner = 16;
+    drawRoundRect(ctx, padInner, padInner, W - padInner * 2, H - padInner * 2, rInner);
+    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+    ctx.stroke();
+
+    // D. Flanking Carved Craftsman Flourishes (Hoa văn mộc nghệ thuật hai bên)
+    const flourishY = 285;
+    // Left flourish
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(217, 119, 6, 0.7)';
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.4)';
+    drawSideFlourish(ctx, 380, flourishY, 1);
+    // Right flourish (mirrored)
+    drawSideFlourish(ctx, W - 380, flourishY, -1);
+
+    // E. Carved Duck Crest (Huy hiệu chú vịt chạm khắc ở giữa trên)
+    const crestX = W / 2;
+    const crestY = 96;
+
+    // Laurel branches flanking duck crest
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = 'rgba(217, 119, 6, 0.75)';
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.55)';
+    drawLaurelBranch(ctx, crestX - 55, crestY, -1);
+    drawLaurelBranch(ctx, crestX + 55, crestY, 1);
+
+    // Duck Crest: Shadow pass (recessed depth)
+    ctx.save();
+    ctx.shadowColor = 'rgba(8, 3, 1, 0.98)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = -3;
+    ctx.shadowOffsetY = -4;
+    drawDuckCrest(ctx, crestX, crestY, 1.05);
+    ctx.fillStyle = '#140602';
+    ctx.fill();
+    ctx.restore();
+
+    // Duck Crest: Lower-right rim highlight
+    ctx.save();
+    drawDuckCrest(ctx, crestX + 2, crestY + 3, 1.05);
+    ctx.fillStyle = 'rgba(254, 240, 138, 0.45)';
+    ctx.fill();
+    ctx.restore();
+
+    // Duck Crest: Burnt groove stroke
+    ctx.save();
+    drawDuckCrest(ctx, crestX, crestY, 1.05);
+    ctx.lineWidth = 4.5;
+    ctx.strokeStyle = '#220d04';
+    ctx.stroke();
+    ctx.restore();
+
+    // Duck Crest: Radiant gold leaf fill
+    ctx.save();
+    const crestGold = ctx.createLinearGradient(0, crestY - 35, 0, crestY + 35);
+    crestGold.addColorStop(0, '#fffbeb');
+    crestGold.addColorStop(0.2, '#fde047');
+    crestGold.addColorStop(0.55, '#eab308');
+    crestGold.addColorStop(0.85, '#ca8a04');
+    crestGold.addColorStop(1, '#854d0e');
+    ctx.fillStyle = crestGold;
+    drawDuckCrest(ctx, crestX, crestY, 1.05);
+    ctx.fill();
+
+    // Wing feather & eye detail
+    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = '#78350f';
+    ctx.beginPath();
+    ctx.arc(crestX + 19, crestY - 26, 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#1e0c03';
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(crestX - 6, crestY + 4);
+    ctx.bezierCurveTo(crestX + 10, crestY + 1, crestX + 24, crestY + 4, crestX + 34, crestY + 10);
+    ctx.stroke();
+    ctx.restore();
+
+    // F. MAIN CARVED LETTERING: "Nhà của Vịt" (Điêu khắc trực tiếp vào thớ gỗ)
+    const text = 'Nhà của Vịt';
+    const textY = 276;
+    const fontPrimary = 'bold 172px "Georgia", "Times New Roman", serif';
+
+    // Pass 1: Deep Chisel Cavity Shadow (Rãnh khoét sâu chìm vào gỗ)
+    ctx.save();
+    ctx.font = fontPrimary;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🦆 Nhà của Vịt Vũ', 256, 64);
+    ctx.shadowColor = 'rgba(4, 2, 1, 0.98)';
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetX = -5;
+    ctx.shadowOffsetY = -7;
+    ctx.fillStyle = '#120502';
+    ctx.fillText(text, crestX, textY);
+    ctx.restore();
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    return texture;
+    // Pass 2: Lower-Right Chisel Lip Specular Highlight (Mép vát rãnh đục bắt sáng)
+    ctx.save();
+    ctx.font = fontPrimary;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255, 248, 197, 0.65)';
+    ctx.fillText(text, crestX + 4, textY + 5);
+    ctx.restore();
+
+    // Pass 3: Dark Burnt Chiseled Groove Wall (Thành rãnh gỗ đục cháy sém)
+    ctx.save();
+    ctx.font = fontPrimary;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = '#1e0a03';
+    ctx.strokeText(text, crestX, textY);
+    ctx.restore();
+
+    // Pass 4: Radiant Gold Leaf Inlay (Thếp vàng hoàng gia lấp lánh trong lòng rãnh chữ)
+    ctx.save();
+    const textGold = ctx.createLinearGradient(0, textY - 88, 0, textY + 88);
+    textGold.addColorStop(0, '#ffffff');    // Ánh kim rực sáng đỉnh chữ
+    textGold.addColorStop(0.12, '#fef08a'); // Vàng kim chói lọi
+    textGold.addColorStop(0.38, '#facc15'); // Vàng ròng nguyên chất
+    textGold.addColorStop(0.68, '#eab308'); // Vàng hoàng kim đậm
+    textGold.addColorStop(0.88, '#ca8a04'); // Vàng hổ phách cổ
+    textGold.addColorStop(1, '#78350f');    // Đồng thau chìm sâu đáy rãnh
+    ctx.fillStyle = textGold;
+    ctx.font = fontPrimary;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, crestX, textY);
+
+    // Pass 5: Crisp Chisel Center Ridge (Sống dao khắc chữ sắc sảo)
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = 'rgba(255, 255, 245, 0.85)';
+    ctx.strokeText(text, crestX, textY);
+    ctx.restore();
+
+    // G. Carved Subtitle / Artisan Hallmark below (Họa tiết & Tiêu đề mộc)
+    const subY = 432;
+    ctx.save();
+    ctx.font = 'bold 32px "Georgia", "Times New Roman", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Subtitle shadow
+    ctx.fillStyle = 'rgba(10, 4, 1, 0.88)';
+    ctx.fillText('✦  THE DUCK CRAFT HOUSE  •  EST. 2004  ✦', crestX - 1.5, subY - 1.5);
+    // Subtitle gold
+    ctx.fillStyle = 'rgba(253, 224, 71, 0.9)';
+    ctx.fillText('✦  THE DUCK CRAFT HOUSE  •  EST. 2004  ✦', crestX, subY);
+    ctx.restore();
+
+    /* ------------------------------------------------------------- */
+    /* 2. SYNCHRONIZED 3D BUMP MAP (Bản đồ độ sâu 3D điêu khắc)     */
+    /* ------------------------------------------------------------- */
+    const bumpCanvas = document.createElement('canvas');
+    bumpCanvas.width = W;
+    bumpCanvas.height = H;
+    const bCtx = bumpCanvas.getContext('2d');
+    if (!bCtx) return { diffuseTex: null, bumpTex: null };
+
+    // Neutral baseline surface (mid grey = 128)
+    bCtx.fillStyle = '#808080';
+    bCtx.fillRect(0, 0, W, H);
+
+    // Wood grain height noise
+    for (let i = 0; i < 120; i++) {
+      const yBase = (i / 120) * H;
+      const freq = 0.003 + (i % 7) * 0.0004;
+      bCtx.beginPath();
+      for (let x = 0; x <= W; x += 32) {
+        const y = yBase + Math.sin(x * freq) * 3;
+        if (x === 0) bCtx.moveTo(x, y);
+        else bCtx.lineTo(x, y);
+      }
+      bCtx.strokeStyle = i % 2 === 0 ? 'rgba(110, 110, 110, 0.15)' : 'rgba(146, 146, 146, 0.15)';
+      bCtx.lineWidth = 2;
+      bCtx.stroke();
+    }
+
+    // Bump Border: Inward depression (#252525) and raised lip (#e0e0e0)
+    drawRoundRect(bCtx, padOuter, padOuter, W - padOuter * 2, H - padOuter * 2, rOuter);
+    bCtx.lineWidth = 6;
+    bCtx.strokeStyle = '#252525';
+    bCtx.stroke();
+
+    drawRoundRect(bCtx, padOuter + 2, padOuter + 2, W - (padOuter + 2) * 2, H - (padOuter + 2) * 2, rOuter);
+    bCtx.lineWidth = 3;
+    bCtx.strokeStyle = '#e0e0e0';
+    bCtx.stroke();
+
+    // Bump Duck Crest
+    bCtx.save();
+    drawDuckCrest(bCtx, crestX - 3, crestY - 4, 1.05);
+    bCtx.fillStyle = '#181818';
+    bCtx.fill();
+    drawDuckCrest(bCtx, crestX + 2, crestY + 3, 1.05);
+    bCtx.fillStyle = '#e8e8e8';
+    bCtx.fill();
+    drawDuckCrest(bCtx, crestX, crestY, 1.05);
+    bCtx.fillStyle = '#404040';
+    bCtx.fill();
+    bCtx.restore();
+
+    // Bump Text "Nhà của Vịt"
+    bCtx.save();
+    bCtx.font = fontPrimary;
+    bCtx.textAlign = 'center';
+    bCtx.textBaseline = 'middle';
+
+    // Deep chiseled groove (offset -5, -7)
+    bCtx.fillStyle = '#101010';
+    bCtx.fillText(text, crestX - 5, textY - 7);
+
+    // Highlight ridge (offset +4, +5)
+    bCtx.fillStyle = '#f5f5f5';
+    bCtx.fillText(text, crestX + 4, textY + 5);
+
+    // Carved letter floor
+    bCtx.fillStyle = '#3c3c3c';
+    bCtx.fillText(text, crestX, textY);
+    bCtx.restore();
+
+    // Create Three.js Textures
+    const diffuse = new THREE.CanvasTexture(canvas);
+    diffuse.colorSpace = THREE.SRGBColorSpace;
+    diffuse.needsUpdate = true;
+
+    const bump = new THREE.CanvasTexture(bumpCanvas);
+    bump.needsUpdate = true;
+
+    return { diffuseTex: diffuse, bumpTex: bump };
   }, []);
 
-  if (!tex) return null;
+  if (!diffuseTex || !bumpTex) return null;
+
   return (
-    <mesh position={[0, 3.45, -5.92]}>
-      <planeGeometry args={[2.5, 0.62]} />
-      <meshBasicMaterial map={tex} transparent />
-    </mesh>
+    <group position={[0, 2.92, -5.9]}>
+      {/* Tấm gỗ bảng hiệu nguyên khối chiều ngang 1.70m bằng chiều ngang cửa chính */}
+      <Box position={[0, 0, 0]} size={[1.70, 0.44, 0.05]} color="#381c0c" roughness={0.75} />
+
+      {/* Khung phào chỉ gỗ 4 cạnh bo viền nổi bật (chiều ngang 1.70m) */}
+      <Box position={[0, 0.205, 0.02]} size={[1.70, 0.035, 0.05]} color="#2c1408" roughness={0.7} />
+      <Box position={[0, -0.205, 0.02]} size={[1.70, 0.035, 0.05]} color="#2c1408" roughness={0.7} />
+      <Box position={[-0.832, 0, 0.02]} size={[0.035, 0.38, 0.05]} color="#2c1408" roughness={0.7} />
+      <Box position={[0.832, 0, 0.02]} size={[0.035, 0.38, 0.05]} color="#2c1408" roughness={0.7} />
+
+      {/* 2 Quai pass gắn kim loại đồng cổ cố định trên đỉnh biển (Antique Brass Mounting Straps) */}
+      <Box position={[-0.52, 0.25, 0.015]} size={[0.04, 0.09, 0.02]} color="#ca8a04" metalness={0.85} roughness={0.25} />
+      <Box position={[0.52, 0.25, 0.015]} size={[0.04, 0.09, 0.02]} color="#ca8a04" metalness={0.85} roughness={0.25} />
+      <mesh position={[-0.52, 0.27, 0.028]}>
+        <sphereGeometry args={[0.014, 12, 12]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.2} />
+      </mesh>
+      <mesh position={[0.52, 0.27, 0.028]}>
+        <sphereGeometry args={[0.014, 12, 12]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.2} />
+      </mesh>
+
+      {/* 4 Đinh tán đồng bán cầu cổ điển cố định 4 góc biển hiệu (Antique Brass Corner Studs) */}
+      <mesh position={[-0.78, 0.16, 0.032]} scale={[1, 1, 0.45]}>
+        <sphereGeometry args={[0.02, 16, 16]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.2} />
+      </mesh>
+      <mesh position={[0.78, 0.16, 0.032]} scale={[1, 1, 0.45]}>
+        <sphereGeometry args={[0.02, 16, 16]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.2} />
+      </mesh>
+      <mesh position={[-0.78, -0.16, 0.032]} scale={[1, 1, 0.45]}>
+        <sphereGeometry args={[0.02, 16, 16]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.2} />
+      </mesh>
+      <mesh position={[0.78, -0.16, 0.032]} scale={[1, 1, 0.45]}>
+        <sphereGeometry args={[0.02, 16, 16]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.2} />
+      </mesh>
+
+      {/* Mặt gỗ điêu khắc chữ "Nhà của Vịt" thếp vàng & vân gỗ tự nhiên với 3D Bump Map */}
+      <mesh position={[0, 0, 0.028]}>
+        <planeGeometry args={[1.64, 0.40]} />
+        <meshStandardMaterial
+          map={diffuseTex}
+          bumpMap={bumpTex}
+          bumpScale={0.035}
+          roughness={0.48}
+          metalness={0.14}
+        />
+      </mesh>
+
+      {/* Ánh sáng điểm rọi dịu nhẹ làm nổi bật chữ chạm khắc & lấp lánh nhũ vàng */}
+      <pointLight position={[0, 0.30, 0.22]} intensity={0.85} color="#fef3c7" distance={2.8} decay={2} />
+    </group>
   );
 }
 
 /* ------------------------------------------------------------------ */
 /* Cozy Room Decor & Ambiance Details                                  */
 /* ------------------------------------------------------------------ */
+
+function useWindowSunlightTexture(timeConfig: TimeConfig) {
+  return useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.clearRect(0, 0, 512, 512);
+
+    const isSunset = timeConfig.phase === 'sunset';
+    const isMorning = timeConfig.phase === 'morning';
+
+    // Tone colors tailored to each time phase
+    const colHalo = isSunset
+      ? 'rgba(251, 146, 60, '
+      : isMorning
+        ? 'rgba(254, 215, 170, '
+        : 'rgba(255, 240, 180, ';
+
+    const colPane = isSunset
+      ? 'rgba(253, 186, 116, '
+      : isMorning
+        ? 'rgba(255, 237, 190, '
+        : 'rgba(255, 250, 220, ';
+
+    // 1. Broad soft ambient glow on floor (vầng sáng tỏa êm dịu, tan biến tự nhiên vào vân gỗ sàn)
+    const haloGrad = ctx.createRadialGradient(256, 256, 40, 256, 256, 240);
+    haloGrad.addColorStop(0, colHalo + '0.28)');
+    haloGrad.addColorStop(0.45, colHalo + '0.14)');
+    haloGrad.addColorStop(0.8, colHalo + '0.03)');
+    haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = haloGrad;
+    ctx.beginPath();
+    ctx.arc(256, 256, 240, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Vệt nắng 4 ô kính cửa sổ: 4 mảng sáng mềm mại, tự nhiên, liền mạch (KHÔNG PHẢI 4 chấm tròn)
+    // Các ô kính trải đều theo phối cảnh xiên:
+    // Thanh đố cửa (mullion) tạo khe bóng mờ mềm mại ở trục X=256 và Y=256
+    const panes = [
+      // Top-Left (gần tường)
+      { x: 92, y: 72, w: 148, h: 168, r: 14 },
+      // Top-Right (gần tường)
+      { x: 272, y: 72, w: 148, h: 168, r: 14 },
+      // Bottom-Left (vươn ra phía sàn phòng)
+      { x: 80, y: 272, w: 160, h: 172, r: 18 },
+      // Bottom-Right (vươn ra phía sàn phòng)
+      { x: 272, y: 272, w: 160, h: 172, r: 18 },
+    ];
+
+    panes.forEach((p) => {
+      ctx.save();
+      // Gradient nhẹ nhàng từ trên xuống dưới (độ sáng đồng đều, êm dịu, không bị đốm tâm)
+      const grad = ctx.createLinearGradient(0, p.y, 0, p.y + p.h);
+      grad.addColorStop(0, colPane + '0.55)');
+      grad.addColorStop(0.5, colPane + '0.45)');
+      grad.addColorStop(1, colPane + '0.35)');
+
+      ctx.fillStyle = grad;
+      // Bóng nhòe quang học tự nhiên (optical penumbra)
+      ctx.shadowColor = colPane + '0.35)';
+      ctx.shadowBlur = 16;
+
+      ctx.beginPath();
+      const r = p.r;
+      ctx.moveTo(p.x + r, p.y);
+      ctx.lineTo(p.x + p.w - r, p.y);
+      ctx.quadraticCurveTo(p.x + p.w, p.y, p.x + p.w, p.y + r);
+      ctx.lineTo(p.x + p.w, p.y + p.h - r);
+      ctx.quadraticCurveTo(p.x + p.w, p.y + p.h, p.x + p.w - r, p.y + p.h);
+      ctx.lineTo(p.x + r, p.y + p.h);
+      ctx.quadraticCurveTo(p.x, p.y + p.h, p.x, p.y + p.h - r);
+      ctx.lineTo(p.x, p.y + r);
+      ctx.quadraticCurveTo(p.x, p.y, p.x + r, p.y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Vệt bóng nan chớp thanh mảnh mềm mại
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.035)';
+      const slatCount = 3;
+      const step = p.h / (slatCount + 1);
+      for (let s = 1; s <= slatCount; s++) {
+        const sy = p.y + s * step;
+        ctx.fillRect(p.x + 8, sy - 2, p.w - 16, 4);
+      }
+
+      ctx.restore();
+    });
+
+    // 3. Feathering mask: Đảm bảo toàn bộ 4 cạnh của canvas mờ dần về 0 alpha, tuyệt đối không bị viền hình vuông
+    ctx.globalCompositeOperation = 'destination-in';
+    const edgeFade = ctx.createRadialGradient(256, 256, 175, 256, 256, 252);
+    edgeFade.addColorStop(0, 'rgba(0, 0, 0, 1)');
+    edgeFade.addColorStop(0.85, 'rgba(0, 0, 0, 0.85)');
+    edgeFade.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = edgeFade;
+    ctx.beginPath();
+    ctx.arc(256, 256, 256, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+  }, [timeConfig.phase]);
+}
+
+function useWindowBeamTexture() {
+  return useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.clearRect(0, 0, 128, 256);
+
+    // Dọc từ trên xuống (Y: 0 là đỉnh cửa sổ, 256 là đáy chạm sàn):
+    // - Đỉnh (cửa sổ): mờ dần vào (0 -> 0.7 ở top 12%)
+    // - Giữa không trung: luồng sáng mịn màng (0.85 - 1.0)
+    // - Đáy tiếp cận sàn: MỜ DẦN HOÀN TOÀN VỀ 0.0 (tuyệt đối không cắt ngang mặt sàn thành đường viền!)
+    const vGrad = ctx.createLinearGradient(0, 0, 0, 256);
+    vGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    vGrad.addColorStop(0.12, 'rgba(255, 255, 255, 0.7)');
+    vGrad.addColorStop(0.35, 'rgba(255, 255, 255, 1.0)');
+    vGrad.addColorStop(0.65, 'rgba(255, 255, 255, 0.75)');
+    vGrad.addColorStop(0.85, 'rgba(255, 255, 255, 0.2)');
+    vGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)'); // 0% opacity ở đáy
+
+    ctx.fillStyle = vGrad;
+    ctx.fillRect(0, 0, 128, 256);
+
+    // Ngang: làm mềm 2 bên sườn của luồng sáng (cosine curve để không có cạnh gắt 2 bên)
+    ctx.globalCompositeOperation = 'destination-in';
+    const hGrad = ctx.createLinearGradient(0, 0, 128, 0);
+    hGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    hGrad.addColorStop(0.25, 'rgba(0, 0, 0, 0.7)');
+    hGrad.addColorStop(0.5, 'rgba(0, 0, 0, 1)');
+    hGrad.addColorStop(0.75, 'rgba(0, 0, 0, 0.7)');
+    hGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = hGrad;
+    ctx.fillRect(0, 0, 128, 256);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+  }, []);
+}
 
 function WindowBeam({
   x,
@@ -576,6 +1270,11 @@ function WindowBeam({
 }) {
   if (timeConfig.isNight) return null;
 
+  const sunTex = useWindowSunlightTexture(timeConfig);
+  const beamTex = useWindowBeamTexture();
+  const floorMeshRef = useRef<THREE.Mesh>(null);
+  const dustRef = useRef<THREE.Group>(null);
+
   const particles = useMemo(() => {
     return Array.from({ length: 18 }, () => ({
       rx: (Math.random() - 0.5) * 1.5,
@@ -587,10 +1286,16 @@ function WindowBeam({
     }));
   }, []);
 
-  const dustRef = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (floorMeshRef.current) {
+      const mat = floorMeshRef.current.material as THREE.MeshBasicMaterial;
+      if (mat) {
+        // Ánh nắng thở nhẹ nhàng tự nhiên theo bầu khí quyển
+        mat.opacity = timeConfig.floorPatchOpacity + Math.sin(t * 0.8) * 0.012;
+      }
+    }
     if (dustRef.current) {
-      const t = clock.elapsedTime;
       dustRef.current.children.forEach((c, idx) => {
         const p = particles[idx];
         if (p) {
@@ -603,38 +1308,35 @@ function WindowBeam({
 
   return (
     <group position={[x, 0, 0]}>
-      {/* Light pool on the floor */}
-      <mesh position={[0, 0.005, zFloor]} rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[2.0, 1.8]} />
-        <meshBasicMaterial
-          color={timeConfig.beamFloorColor}
-          transparent
-          opacity={timeConfig.floorPatchOpacity}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </mesh>
-      <mesh position={[0, 0.006, zFloor]} rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[1.4, 1.2]} />
-        <meshBasicMaterial
-          color={timeConfig.beamFloorColor}
-          transparent
-          opacity={timeConfig.floorPatchOpacity * 1.25}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </mesh>
+      {/* Vệt nắng tự nhiên chiếu từ cửa sổ xuống sàn gỗ: 4 mảng sáng mềm mại, viền nhòe tự nhiên */}
+      {sunTex && (
+        <mesh
+          ref={floorMeshRef}
+          position={[0, 0.005, zFloor]}
+          rotation-x={-Math.PI / 2}
+        >
+          <planeGeometry args={[2.5, 2.7]} />
+          <meshBasicMaterial
+            map={sunTex}
+            transparent
+            opacity={timeConfig.floorPatchOpacity * 0.45}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
 
-      {/* Volumetric sunbeam / moonbeam shaft */}
+      {/* Volumetric sunbeam shaft: mềm mại, mờ dần về 0 ở đáy nên KHÔNG BAO GIỜ bị cắt viền trên mặt sàn */}
       <mesh
-        position={[0, 1.15, (zFloor - 5.8) / 2]}
-        rotation={[Math.atan2(zFloor - (-5.8), 2.3) - Math.PI / 2, 0, 0]}
+        position={[0, 1.18, (zFloor - 5.8) / 2]}
+        rotation={[-Math.atan2(zFloor - (-5.8), 2.3), 0, 0]}
       >
-        <cylinderGeometry args={[0.75, 1.1, 3.8, 16, 1, true]} />
+        <cylinderGeometry args={[0.72, 1.25, 3.8, 32, 1, true]} />
         <meshBasicMaterial
+          map={beamTex ?? undefined}
           color={timeConfig.beamColor}
           transparent
-          opacity={timeConfig.beamOpacity}
+          opacity={timeConfig.beamOpacity * 0.85}
           side={THREE.DoubleSide}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
@@ -656,6 +1358,59 @@ function WindowBeam({
         ))}
       </group>
     </group>
+  );
+}
+
+function AtmosphericDust({ isNight }: { isNight?: boolean }) {
+  const pointsRef = useRef<THREE.Points>(null);
+  const count = 75;
+
+  const [positions, phases] = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    const ph = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3 + 0] = (Math.random() - 0.5) * 12;
+      pos[i * 3 + 1] = 0.6 + Math.random() * 3.2;
+      pos[i * 3 + 2] = -4.8 + Math.random() * 9.6;
+      ph[i] = Math.random() * Math.PI * 2;
+    }
+    return [pos, ph];
+  }, []);
+
+  useFrame(({ clock }) => {
+    if (!pointsRef.current) return;
+    const t = clock.getElapsedTime() * 0.35;
+    const geom = pointsRef.current.geometry;
+    const posAttr = geom.getAttribute('position') as THREE.BufferAttribute;
+    const arr = posAttr.array as Float32Array;
+
+    for (let i = 0; i < count; i++) {
+      const idx = i * 3;
+      arr[idx + 1] += Math.sin(t + phases[i]) * 0.0012;
+      arr[idx + 0] += Math.cos(t * 0.8 + phases[i]) * 0.0006;
+      if (arr[idx + 1] > 3.9) arr[idx + 1] = 0.6;
+      if (arr[idx + 1] < 0.5) arr[idx + 1] = 3.8;
+    }
+    posAttr.needsUpdate = true;
+  });
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          args={[positions, 3]}
+        />
+      </bufferGeometry>
+      <pointsMaterial
+        size={0.042}
+        color={isNight ? '#bae6fd' : '#fef08a'}
+        transparent
+        opacity={isNight ? 0.35 : 0.55}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
+    </points>
   );
 }
 
@@ -1335,16 +2090,16 @@ const ROOMBA_OBSTACLES = [
   { x: -7.0, z: 3.8, r: 0.95 },
   { x: -5.9, z: 3.5, r: 0.65 },
   { x: -7.2, z: 0.2, r: 0.5 },
-  // Tech lab desk & server rack
-  { x: 4.8, z: -4.5, r: 1.45 },
+  // Tech lab desk & server rack (desk rotated to right wall)
+  { x: 6.8, z: -3.2, r: 1.35 },
   { x: 7.0, z: -5.2, r: 0.75 },
   // Projects bookshelf & reading corner
   { x: 7.4, z: 1.7, r: 0.95 },
   { x: 4.8, z: 3.4, r: 1.25 },
   { x: 4.05, z: 3.3, r: 0.45 },
   { x: 3.65, z: 4.1, r: 0.65 },
-  // Door mailbox
-  { x: 1.5, z: -5.2, r: 0.65 },
+  // Contact vintage phone console table (right side of entrance door)
+  { x: 1.5, z: -5.1, r: 0.65 },
   // Potted plants
   { x: -7.1, z: 4.8, r: 0.7 },
   { x: 7.1, z: 4.8, r: 0.7 },
@@ -1626,46 +2381,193 @@ function Room({
   duckRef?: React.RefObject<THREE.Group | null>;
   duckSpotRef?: React.RefObject<DuckSpot>;
 }) {
-  const planks = useMemo(() => Array.from({ length: 19 }, (_, i) => -7.2 + i * 0.8), []);
+  // Sàn gỗ sồi cao cấp kiến trúc Bắc Âu (Luxury Scandinavian Satin Oak Parquet)
+  const floorTexture = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.fillStyle = '#b77943';
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    const plankH = 64;
+    const plankW = 256;
+    const oakPalettes = [
+      '#c4864f', '#bb7d46', '#ae703a', '#c78d57', '#b3743e', '#bf824c', '#a86a35', '#cb925d',
+    ];
+
+    for (let row = 0; row < 16; row++) {
+      const y = row * plankH;
+      const offset = (row % 3) * 85;
+      for (let col = -1; col < 6; col++) {
+        const x = col * plankW + (row % 2 === 0 ? 0 : plankW / 2) - offset;
+        const paletteIdx = Math.abs((row * 7 + col * 13) % oakPalettes.length);
+        ctx.fillStyle = oakPalettes[paletteIdx];
+        ctx.fillRect(x + 1, y + 1, plankW - 2, plankH - 2);
+
+        // Vân gỗ hữu cơ tự nhiên
+        ctx.strokeStyle = 'rgba(70, 36, 12, 0.08)';
+        ctx.lineWidth = 1;
+        for (let g = 0; g < 4; g++) {
+          const gy = y + 10 + g * 12;
+          ctx.beginPath();
+          ctx.moveTo(x + 2, gy);
+          ctx.bezierCurveTo(
+            x + plankW * 0.33, gy + (g % 2 === 0 ? 2 : -2),
+            x + plankW * 0.66, gy + (g % 2 === 0 ? -2 : 2),
+            x + plankW - 2, gy
+          );
+          ctx.stroke();
+        }
+
+        // Vát cạnh phản quang ánh sáng (bevel highlight)
+        ctx.strokeStyle = 'rgba(255, 235, 205, 0.16)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 1, y + plankH - 2);
+        ctx.lineTo(x + 1, y + 1);
+        ctx.lineTo(x + plankW - 2, y + 1);
+        ctx.stroke();
+
+        // Rãnh chỉ ghép mộng bóng tối (groove shadow)
+        ctx.strokeStyle = 'rgba(48, 22, 7, 0.38)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x + 1, y + plankH - 1);
+        ctx.lineTo(x + plankW - 1, y + plankH - 1);
+        ctx.lineTo(x + plankW - 1, y + 1);
+        ctx.stroke();
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 3);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    return tex;
+  }, []);
+
+  // Thảm dệt thổ cẩm Bắc Âu cao cấp với hoa văn Aztec/Nordic & viền tua rua
+  const rugTexture = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const cx = 256;
+    const cy = 256;
+    const r = 246;
+
+    // Nền len lông cừu dệt mộc
+    ctx.fillStyle = '#f8ede3';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    const bands = [
+      { r: 242, w: 6, color: '#c59b6c' },
+      { r: 228, w: 14, color: '#e07a5f' },
+      { r: 202, w: 5, color: '#3d405b' },
+      { r: 184, w: 18, color: '#81b29a' },
+      { r: 154, w: 6, color: '#f2cc8f' },
+      { r: 136, w: 16, color: '#e07a5f' },
+      { r: 106, w: 5, color: '#3d405b' },
+      { r: 82, w: 20, color: '#81b29a' },
+      { r: 50, w: 10, color: '#c59b6c' },
+      { r: 26, w: 26, color: '#e07a5f' },
+    ];
+
+    for (const b of bands) {
+      ctx.strokeStyle = b.color;
+      ctx.lineWidth = b.w;
+      ctx.beginPath();
+      ctx.arc(cx, cy, b.r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Hoa văn dệt nan kim & họa tiết hình học
+    const numSpokes = 48;
+    for (let i = 0; i < numSpokes; i++) {
+      const angle = (i / numSpokes) * Math.PI * 2;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+
+      ctx.strokeStyle = '#3d405b';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx + cos * 218, cy + sin * 218);
+      ctx.lineTo(cx + cos * 238, cy + sin * 238);
+      ctx.stroke();
+
+      if (i % 2 === 0) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(cx + cos * 170, cy + sin * 170, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Vân sớ sợi vải dệt
+    ctx.fillStyle = 'rgba(60, 40, 20, 0.04)';
+    for (let y = 0; y < 512; y += 4) {
+      ctx.fillRect(0, y, 512, 1.5);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
 
   return (
     <group>
-      {/* Floor */}
+      {/* Floor - Luxury Scandinavian Satin Oak Parquet */}
       <mesh rotation-x={-Math.PI / 2} receiveShadow onClick={onFloorClick}>
         <planeGeometry args={[16, 12]} />
-        <meshStandardMaterial color="#c08552" roughness={0.85} />
+        <meshPhysicalMaterial
+          map={floorTexture ?? undefined}
+          color="#cf9461"
+          roughness={0.52}
+          clearcoat={0.22}
+          clearcoatRoughness={0.42}
+          reflectivity={0.5}
+        />
       </mesh>
-      {planks.map((x) => (
-        <mesh key={x} position={[x, 0.002, 0]} rotation-x={-Math.PI / 2}>
-          <planeGeometry args={[0.03, 12]} />
-          <meshBasicMaterial color="#9a6239" />
-        </mesh>
-      ))}
 
-      {/* Rug with soft contact shadow */}
+      {/* Rug with soft contact shadow and woven wool fabric sheen */}
       <mesh position={[0, 0.003, 1]} rotation-x={-Math.PI / 2}>
-        <circleGeometry args={[2.68, 48]} />
-        <meshBasicMaterial color="#1c140d" transparent opacity={0.16} />
+        <circleGeometry args={[2.68, 64]} />
+        <meshBasicMaterial color="#1c140d" transparent opacity={0.18} />
       </mesh>
       <mesh position={[0, 0.006, 1]} rotation-x={-Math.PI / 2} receiveShadow>
-        <circleGeometry args={[2.6, 48]} />
-        <meshStandardMaterial color="#f4dfc8" roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 0.008, 1]} rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[2.42, 2.52, 48]} />
-        <meshStandardMaterial color="#d4a373" roughness={1} />
-      </mesh>
-      <mesh position={[0, 0.008, 1]} rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[1.95, 2.15, 48]} />
-        <meshStandardMaterial color="#e07a5f" roughness={1} />
-      </mesh>
-      <mesh position={[0, 0.008, 1]} rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[1.2, 1.3, 48]} />
-        <meshStandardMaterial color="#81b29a" roughness={1} />
+        <circleGeometry args={[2.62, 64]} />
+        <meshPhysicalMaterial
+          map={rugTexture ?? undefined}
+          roughness={0.92}
+          sheen={0.88}
+          sheenColor="#fff2e0"
+          sheenRoughness={0.4}
+        />
       </mesh>
 
+      {/* Architectural Wood Skirting Boards / Len chân tường */}
+      <Box position={[0, 0.05, -5.98]} size={[16.2, 0.1, 0.04]} color="#7c4a24" roughness={0.6} />
+      <Box position={[-7.98, 0.05, 0]} size={[0.04, 0.1, 12.2]} color="#7c4a24" roughness={0.6} />
+      <Box position={[7.98, 0.05, 0]} size={[0.04, 0.1, 12.2]} color="#7c4a24" roughness={0.6} />
+
       {/* Walls */}
-      <Box position={[0, 2, -6.15]} size={[16.6, 4, 0.3]} color="#f4e4c6" />
+      {/* Back Wall with real window openings allowing shutters to open outwards */}
+      <Box position={[0, 0.8, -6.15]} size={[16.6, 1.6, 0.3]} color="#f4e4c6" />
+      <Box position={[0, 3.5, -6.15]} size={[16.6, 1.0, 0.3]} color="#f4e4c6" />
+      <Box position={[-5.95, 2.3, -6.15]} size={[4.7, 1.4, 0.3]} color="#f4e4c6" />
+      <Box position={[0.15, 2.3, -6.15]} size={[3.9, 1.4, 0.3]} color="#f4e4c6" />
+      <Box position={[6.1, 2.3, -6.15]} size={[4.4, 1.4, 0.3]} color="#f4e4c6" />
       <Box position={[0, 0.5, -5.98]} size={[16, 1, 0.06]} color="#c99a6b" />
       <Box position={[0, 1.02, -5.95]} size={[16, 0.06, 0.1]} color="#8d5a34" />
       <Box position={[-8.15, 2, 0]} size={[0.3, 4, 12.6]} color="#ecd8b6" />
@@ -1720,68 +2622,274 @@ function Room({
 /* ------------------------------------------------------------------ */
 
 function SofaArtwork() {
-  const [texture, setTexture] = useState<THREE.Texture | null>(null);
+  const dandelionLightRef = useRef<THREE.PointLight>(null);
+  const particlesRef = useRef<THREE.Group>(null);
+  const artworkMeshRef = useRef<THREE.Mesh>(null);
+  const bloomMeshRef = useRef<THREE.Mesh>(null);
+  const bloomMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  const auraMatRef = useRef<THREE.MeshBasicMaterial>(null);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  const texture = useMemo(() => {
+    if (typeof window === 'undefined') return null;
     const loader = new THREE.TextureLoader();
-    loader.load('/artwork-sofa.jpg', (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.minFilter = THREE.LinearMipmapLinearFilter;
-      tex.magFilter = THREE.LinearFilter;
-      tex.generateMipmaps = true;
-      setTexture(tex);
-    });
+    const tex = loader.load('/artwork-sofa.jpg?v=4');
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    return tex;
   }, []);
 
-  // Proportions: exact 16:10 aspect ratio matching user artwork (1024 x 640)
-  const canvasW = 3.84;
-  const canvasH = 2.40;
+  // Tạo texture phát quang tự nhiên của hoa bồ công anh: các sợi tơ ánh sáng tỏa tia hữu cơ kết hợp vầng hào quang mềm
+  const bloomTexture = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const cx = 256;
+    const cy = 256;
+
+    // 1. Quầng sáng aura tán xạ tự nhiên, tâm phát quang rực rỡ ôm trọn đóa hoa
+    const grad = ctx.createRadialGradient(cx, cy, 12, cx, cy, 240);
+    grad.addColorStop(0, 'rgba(255, 255, 245, 0.72)');
+    grad.addColorStop(0.18, 'rgba(255, 250, 215, 0.60)');
+    grad.addColorStop(0.42, 'rgba(254, 240, 138, 0.35)');
+    grad.addColorStop(0.70, 'rgba(253, 224, 71, 0.14)');
+    grad.addColorStop(0.92, 'rgba(250, 204, 21, 0.03)');
+    grad.addColorStop(1, 'rgba(250, 204, 21, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // 2. 64 sợi tơ ánh sáng bồ công anh tỏa tia tự nhiên, cường độ sáng rực
+    ctx.lineCap = 'round';
+    const numRays = 64;
+    for (let i = 0; i < numRays; i++) {
+      const angle = (i / numRays) * Math.PI * 2 + ((i * 17) % 9) * 0.035;
+      const length = 55 + ((i * 37) % 125) + (i % 3 === 0 ? 32 : 0);
+      const alpha = 0.45 + (i % 5) * 0.11;
+
+      const rayGrad = ctx.createLinearGradient(
+        cx,
+        cy,
+        cx + Math.cos(angle) * length,
+        cy + Math.sin(angle) * length
+      );
+      rayGrad.addColorStop(0, `rgba(255, 255, 250, ${alpha})`);
+      rayGrad.addColorStop(0.55, `rgba(254, 240, 138, ${alpha * 0.8})`);
+      rayGrad.addColorStop(1, 'rgba(253, 224, 71, 0)');
+
+      ctx.strokeStyle = rayGrad;
+      ctx.lineWidth = i % 2 === 0 ? 1.8 : 1.2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(angle) * length, cy + Math.sin(angle) * length);
+      ctx.stroke();
+
+      // Đốm bông li ti ở đầu mút như hạt giống bồ công anh
+      if (i % 2 === 0) {
+        const tipX = cx + Math.cos(angle) * (length * 0.94);
+        const tipY = cy + Math.sin(angle) * (length * 0.94);
+        const tipR = 2.4 + (i % 3);
+        const tipGrad = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, tipR);
+        tipGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+        tipGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+        ctx.fillStyle = tipGrad;
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, tipR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }, []);
+
+  // Quầng sáng phụ lan tỏa rộng tự nhiên ra xung quanh
+  const auraTexture = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const grad = ctx.createRadialGradient(128, 128, 10, 128, 128, 128);
+    grad.addColorStop(0, 'rgba(255, 248, 200, 0.42)');
+    grad.addColorStop(0.35, 'rgba(254, 240, 138, 0.22)');
+    grad.addColorStop(0.7, 'rgba(253, 224, 71, 0.07)');
+    grad.addColorStop(1, 'rgba(250, 204, 21, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 256, 256);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }, []);
+
+  // Proportions: exact aspect ratio matching user-attached artwork (898 x 434, ~2.069:1)
+  const canvasW = 3.90;
+  const canvasH = 1.885;
   const frameT = 0.07;
-  const frameW = canvasW + frameT * 2; // 3.98m
-  const frameH = canvasH + frameT * 2; // 2.54m
+  const frameW = canvasW + frameT * 2; // 4.04m
+  const frameH = canvasH + frameT * 2; // 2.025m
+
+  // 16 sợi tơ bụi sáng bồ công anh li ti bay lượn nhẹ nhàng từ đóa hoa
+  const spores = useMemo(() => {
+    return Array.from({ length: 16 }, (_, i) => ({
+      rx: (Math.random() - 0.5) * 0.36,
+      ry: (Math.random() - 0.5) * 0.26,
+      rz: 0.12 + Math.random() * 0.65,
+      speedX: (Math.random() - 0.38) * 0.12,
+      speedY: 0.08 + Math.random() * 0.18,
+      speedZ: 0.06 + Math.random() * 0.15,
+      phase: Math.random() * Math.PI * 2,
+      size: 0.005 + Math.random() * 0.006,
+      seed: i,
+    }));
+  }, []);
+
+  // Animation: Nhịp thở ánh sáng êm dịu, lúc mạnh lúc yếu mượt mà (không bao giờ bị chớp tắt hay che khuất)
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    const breath = Math.sin(t * 1.5) * 0.5 + 0.5; // Dao động êm ái tuần hoàn từ 0.0 (lúc yếu) đến 1.0 (lúc mạnh)
+
+    // 1. Nguồn sáng điểm biến thiên mượt mà: lúc mạnh (6.8), lúc yếu (3.5)
+    if (dandelionLightRef.current) {
+      dandelionLightRef.current.intensity = 3.5 + breath * 3.3;
+      dandelionLightRef.current.distance = 868 + breath * 2.0;
+    }
+
+    // 2. Kích thước và độ sáng của vầng tơ phát quang bồ công anh thở nhẹ theo nhịp
+    if (bloomMeshRef.current) {
+      const s = 0.94 + breath * 0.12;
+      bloomMeshRef.current.scale.set(s, s, 1);
+    }
+    if (bloomMatRef.current) {
+      bloomMatRef.current.opacity = 0.35 + breath * 0.38;
+    }
+
+    // 3. Quầng sáng lan tỏa xung quanh biến thiên đồng điệu
+    if (auraMatRef.current) {
+      auraMatRef.current.opacity = 0.22 + breath * 0.28;
+    }
+
+    // 4. Các sợi tơ li ti bay lơ lửng nhẹ nhàng thoát ra từ đóa hoa về phía phòng khách (+Z)
+    // Giữ quỹ đạo bay ra phòng, không bay thẳng lên khuôn mặt cô gái
+    if (particlesRef.current) {
+      particlesRef.current.children.forEach((c, idx) => {
+        const s = spores[idx];
+        if (!s) return;
+        const progress = ((t * s.speedY * 0.7 + s.seed * 0.5) % 3.0) / 3.0; // 0 to 1 cycle
+        c.position.x = 0.09 + s.rx + progress * s.speedX * 1.6;
+        c.position.y = 0.09 + s.ry + Math.sin(t * 1.2 + s.phase) * 0.04 - progress * 0.14;
+        c.position.z = 0.05 + progress * s.rz * 1.5;
+        const scale = Math.sin(progress * Math.PI) * s.size;
+        c.scale.setScalar(Math.max(0.012, scale));
+      });
+    }
+  });
 
   return (
-    // Positioned at x=-5.73 so left edge reaches x=-7.72 (close to left wall at x=-8.0)
-    // and lowered to y=2.32 so bottom edge dips naturally behind sofa backrest (lower by 0.58m)
     <group position={[-5.73, 2.32, -5.96]}>
-      {/* Backing mount plate */}
+      {/* Khung đế sau tường */}
       <mesh position={[0, 0, 0]}>
         <planeGeometry args={[frameW, frameH]} />
         <meshStandardMaterial color="#1a110b" roughness={0.9} />
       </mesh>
 
-      {/* The Artwork Canvas with user-attached masterpiece - crisp, tone-correct, zero z-fighting */}
-      <mesh position={[0, 0, 0.015]}>
+      {/* Tác phẩm tranh cô gái nguyên bản 100% sắc nét, rực rỡ (cố định ở z=0.02, không bị z-clipping) */}
+      <mesh ref={artworkMeshRef} position={[0, 0, 0.02]}>
         <planeGeometry args={[canvasW, canvasH]} />
         {texture ? (
           <meshBasicMaterial map={texture} toneMapped={false} />
         ) : (
-          <meshStandardMaterial color="#0f172a" />
+          <meshBasicMaterial color="#1e1b4b" />
         )}
       </mesh>
 
-      {/* Elegant dark espresso outer frame border bars (no flickering/no z-fighting) */}
-      <Box position={[0, (canvasH + frameT) / 2, 0.022]} size={[frameW, frameT, 0.035]} color="#231710" roughness={0.7} />
-      <Box position={[0, -(canvasH + frameT) / 2, 0.022]} size={[frameW, frameT, 0.035]} color="#231710" roughness={0.7} />
-      <Box position={[-(canvasW + frameT) / 2, 0, 0.022]} size={[frameT, canvasH, 0.035]} color="#231710" roughness={0.7} />
-      <Box position={[(canvasW + frameT) / 2, 0, 0.022]} size={[frameT, canvasH, 0.035]} color="#231710" roughness={0.7} />
+      {/* Ánh sáng ấm áp tự nhiên tỏa ra từ chính đóa hoa bồ công anh: nhịp thở mượt mà, lúc mạnh lúc yếu */}
+      <pointLight
+        ref={dandelionLightRef}
+        position={[0.00, -0.09, 0.20]}
+        intensity={5.0}
+        distance={9.5}
+        decay={1.3}
+        color="#fff4b8"
+      />
 
-      {/* Subtle gold foil fillet inner border lining */}
-      <mesh position={[0, canvasH / 2, 0.018]}>
-        <planeGeometry args={[canvasW, 0.012]} />
+      {/* Quầng sáng lan tỏa rộng nhẹ nhàng quanh hoa bồ công anh (nằm ở z=0.024 trước mặt tranh) */}
+      {auraTexture && (
+        <mesh position={[0.00, -0.09, 0.024]}>
+          <planeGeometry args={[0.78, 0.78]} />
+          <meshBasicMaterial
+            ref={auraMatRef}
+            map={auraTexture}
+            transparent
+            opacity={0.35}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+
+      {/* Ánh sáng phát quang của chính hoa bồ công anh: khớp chính xác vị trí bông hoa, z=0.026 trước mặt tranh */}
+      {bloomTexture && (
+        <mesh ref={bloomMeshRef} position={[0.00, -0.09, 0.026]}>
+          <planeGeometry args={[0.48, 0.48]} />
+          <meshBasicMaterial
+            ref={bloomMatRef}
+            map={bloomTexture}
+            transparent
+            opacity={0.55}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+
+      {/* Sợi tơ phát sáng bay lơ lửng lung linh từ đóa hoa vào phòng khách */}
+      <group ref={particlesRef}>
+        {spores.map((s, idx) => (
+          <mesh key={idx} position={[0.00, -0.09, 0.08]}>
+            <circleGeometry args={[1, 8]} />
+            <meshBasicMaterial
+              color={idx % 2 === 0 ? '#ffffff' : '#fef08a'}
+              transparent
+              opacity={0.65}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Khung tranh gỗ óc chó 3D dày dặn viền phào chỉ */}
+      <Box position={[0, (canvasH + frameT) / 2, 0.035]} size={[frameW, frameT, 0.07]} color="#231710" roughness={0.7} />
+      <Box position={[0, -(canvasH + frameT) / 2, 0.035]} size={[frameW, frameT, 0.07]} color="#231710" roughness={0.7} />
+      <Box position={[-(canvasW + frameT) / 2, 0, 0.035]} size={[frameT, canvasH, 0.07]} color="#231710" roughness={0.7} />
+      <Box position={[(canvasW + frameT) / 2, 0, 0.035]} size={[frameT, canvasH, 0.07]} color="#231710" roughness={0.7} />
+
+      {/* Viền nẹp dát vàng cổ điển */}
+      <mesh position={[0, canvasH / 2, 0.025]}>
+        <planeGeometry args={[canvasW, 0.014]} />
         <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.25} />
       </mesh>
-      <mesh position={[0, -canvasH / 2, 0.018]}>
-        <planeGeometry args={[canvasW, 0.012]} />
+      <mesh position={[0, -canvasH / 2, 0.025]}>
+        <planeGeometry args={[canvasW, 0.014]} />
         <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.25} />
       </mesh>
-      <mesh position={[-canvasW / 2, 0, 0.018]}>
-        <planeGeometry args={[0.012, canvasH]} />
+      <mesh position={[-canvasW / 2, 0, 0.025]}>
+        <planeGeometry args={[0.014, canvasH]} />
         <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.25} />
       </mesh>
-      <mesh position={[canvasW / 2, 0, 0.018]}>
-        <planeGeometry args={[0.012, canvasH]} />
+      <mesh position={[canvasW / 2, 0, 0.025]}>
+        <planeGeometry args={[0.014, canvasH]} />
         <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.25} />
       </mesh>
     </group>
@@ -1799,7 +2907,7 @@ function LivingRoom({
 }) {
   return (
     <group>
-      {/* Clickable Sofa */}
+      {/* Clickable Luxury Burgundy Sofa (Đỏ Đô) */}
       <group
         onClick={(e) => {
           e.stopPropagation();
@@ -1813,24 +2921,56 @@ function LivingRoom({
           document.body.style.cursor = '';
         }}
       >
-        <Box position={[-5, 0.3, -4.9]} size={[2.8, 0.6, 1.1]} color="#d1495b" />
-        <Box position={[-5, 0.9, -5.35]} size={[2.8, 0.9, 0.3]} color="#c03a4c" />
-        <Box position={[-6.35, 0.55, -4.9]} size={[0.25, 0.75, 1.1]} color="#b02e40" />
-        <Box position={[-3.65, 0.55, -4.9]} size={[0.25, 0.75, 1.1]} color="#b02e40" />
-        <Box position={[-5.6, 0.68, -4.8]} size={[1.1, 0.16, 0.8]} color="#edae49" />
-        <Box position={[-4.4, 0.68, -4.8]} size={[1.1, 0.16, 0.8]} color="#edae49" />
-        {/* Duck plushie on sofa */}
-        <mesh position={[-4.2, 0.95, -4.95]} castShadow>
-          <sphereGeometry args={[0.18, 16, 16]} />
-          <meshStandardMaterial color={DUCK_YELLOW} />
+        {/* 4 Chân ghế gỗ sồi tối màu bịt đồng thau cao cấp */}
+        {[
+          [-6.28, -4.42],
+          [-3.72, -4.42],
+          [-6.28, -5.36],
+          [-3.72, -5.36],
+        ].map(([lx, lz], i) => (
+          <group key={i} position={[lx, 0, lz]}>
+            <Cyl position={[0, 0.05, 0]} args={[0.03, 0.042, 0.1]} color="#24140e" roughness={0.6} />
+            <Cyl position={[0, 0.015, 0]} args={[0.033, 0.036, 0.03]} color="#d4af37" metalness={0.85} roughness={0.25} />
+          </group>
+        ))}
+
+        {/* Khung đế sofa bọc vải nhung đỏ đô */}
+        <Box position={[-5, 0.22, -4.9]} size={[2.72, 0.24, 1.08]} color="#58111a" roughness={0.8} />
+
+        {/* Tay vịn trái & phải liền khối, bo tròn mềm mại */}
+        <Box position={[-6.28, 0.39, -4.9]} size={[0.28, 0.58, 1.12]} color="#58111a" roughness={0.76} />
+        <Box position={[-3.72, 0.39, -4.9]} size={[0.28, 0.58, 1.12]} color="#58111a" roughness={0.76} />
+        {/* Đệm kê tay bo tròn êm ái trên tay vịn */}
+        <Box position={[-6.28, 0.69, -4.9]} size={[0.26, 0.06, 1.08]} color="#6b1424" roughness={0.72} />
+        <Box position={[-3.72, 0.69, -4.9]} size={[0.26, 0.06, 1.08]} color="#6b1424" roughness={0.72} />
+
+        {/* Tựa lưng sau sofa bọc nhung đỏ đô */}
+        <Box position={[-5, 0.78, -5.34]} size={[2.32, 0.68, 0.24]} color="#58111a" roughness={0.8} />
+
+        {/* 2 Đệm ngồi nhung đỏ đô êm ái, căng mọng */}
+        <Box position={[-5.58, 0.42, -4.82]} size={[1.12, 0.18, 0.86]} color="#721727" roughness={0.7} />
+        <Box position={[-4.42, 0.42, -4.82]} size={[1.12, 0.18, 0.86]} color="#721727" roughness={0.7} />
+
+        {/* 2 Đệm tựa lưng nhung đỏ đô */}
+        <Box position={[-5.58, 0.76, -5.18]} size={[1.10, 0.44, 0.16]} color="#6b1424" roughness={0.72} />
+        <Box position={[-4.42, 0.76, -5.18]} size={[1.10, 0.44, 0.16]} color="#6b1424" roughness={0.72} />
+
+        {/* Gối tựa trang trí: lụa vàng champagne & nhung đỏ đô sang trọng */}
+        <Box position={[-6.04, 0.58, -4.82]} size={[0.12, 0.32, 0.32]} rotation={[0, 0.2, -0.22]} color="#d4af37" roughness={0.35} clearcoat={0.35} />
+        <Box position={[-3.96, 0.58, -4.82]} size={[0.12, 0.32, 0.32]} rotation={[0, -0.2, 0.22]} color="#7a162e" roughness={0.6} />
+
+        {/* Chú vịt nhồi bông nhỏ xinh ngồi ngay ngắn trên đệm sofa */}
+        <mesh position={[-4.3, 0.58, -4.75]} castShadow>
+          <sphereGeometry args={[0.15, 16, 16]} />
+          <meshPhysicalMaterial color={DUCK_YELLOW} roughness={0.38} clearcoat={0.35} clearcoatRoughness={0.2} />
         </mesh>
-        <mesh position={[-4.2, 1.18, -4.88]} castShadow>
-          <sphereGeometry args={[0.11, 16, 16]} />
-          <meshStandardMaterial color={DUCK_YELLOW} />
+        <mesh position={[-4.3, 0.76, -4.70]} castShadow>
+          <sphereGeometry args={[0.09, 16, 16]} />
+          <meshPhysicalMaterial color={DUCK_YELLOW} roughness={0.38} clearcoat={0.35} clearcoatRoughness={0.2} />
         </mesh>
-        <mesh position={[-4.2, 1.16, -4.75]}>
-          <boxGeometry args={[0.08, 0.03, 0.08]} />
-          <meshStandardMaterial color={BEAK} />
+        <mesh position={[-4.3, 0.74, -4.59]}>
+          <boxGeometry args={[0.065, 0.025, 0.065]} />
+          <meshPhysicalMaterial color={BEAK} roughness={0.25} clearcoat={0.5} />
         </mesh>
       </group>
       {/* Coffee table (Click to view About Station) */}
@@ -1848,7 +2988,7 @@ function LivingRoom({
           document.body.style.cursor = '';
         }}
       >
-        <Box position={[-5, 0.45, -3.4]} size={[1.4, 0.08, 0.7]} color="#6b4226" />
+        <Box position={[-5, 0.45, -3.4]} size={[1.4, 0.08, 0.7]} color="#5a3820" roughness={0.32} clearcoat={0.4} clearcoatRoughness={0.18} />
         {[
           [-5.6, -3.15],
           [-4.4, -3.15],
@@ -1880,7 +3020,7 @@ function LivingRoom({
           emissive="#ffb347"
           emissiveIntensity={
             timeConfig
-              ? (isDimmed ? 0.35 : timeConfig.floorLampEmissiveIntensity)
+              ? (isDimmed ? 0.45 : timeConfig.floorLampEmissiveIntensity)
               : 0.9
           }
           side={THREE.DoubleSide}
@@ -1890,11 +3030,11 @@ function LivingRoom({
         position={[-7.2, 1.7, -5]}
         intensity={
           timeConfig
-            ? (isDimmed ? 1.2 : timeConfig.floorLampIntensity)
+            ? (isDimmed ? 1.8 : timeConfig.floorLampIntensity)
             : 5
         }
-        distance={7}
-        color="#ffb347"
+        distance={9}
+        color="#ffaa3b"
       />
     </group>
   );
@@ -1975,10 +3115,18 @@ function PrintWorkshop() {
   );
 }
 
-function CodeScreen({ position, color }: { position: V3; color: string }) {
+function CodeScreen({
+  position,
+  color,
+  rotation = [0, 0, 0],
+}: {
+  position: V3;
+  color: string;
+  rotation?: V3;
+}) {
   const lines = [0.6, 0.85, 0.45, 0.7, 0.55];
   return (
-    <group position={position}>
+    <group position={position} rotation={rotation}>
       <Box position={[0, 0, 0]} size={[0.95, 0.6, 0.05]} color="#111827" />
       <mesh position={[0, 0, 0.03]}>
         <planeGeometry args={[0.86, 0.5]} />
@@ -1994,7 +3142,13 @@ function CodeScreen({ position, color }: { position: V3; color: string }) {
   );
 }
 
-function TechLab() {
+function TechLab({
+  onChairClick,
+  onDeskClick,
+}: {
+  onChairClick?: () => void;
+  onDeskClick?: () => void;
+}) {
   const orb = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
     if (orb.current) {
@@ -2004,50 +3158,82 @@ function TechLab() {
   });
   return (
     <group>
-      {/* Desk */}
-      <Box position={[4.8, 0.8, -5.1]} size={[2.6, 0.08, 1.1]} color="#8d6e63" />
-      {[
-        [3.6, -5.55],
-        [6.0, -5.55],
-        [3.6, -4.65],
-        [6.0, -4.65],
-      ].map(([x, z]) => (
-        <Box key={`${x}${z}`} position={[x, 0.38, z]} size={[0.08, 0.76, 0.08]} color="#5d4037" />
-      ))}
-      <CodeScreen position={[4.3, 1.35, -5.35]} color="#38bdf8" />
-      <CodeScreen position={[5.35, 1.35, -5.35]} color="#a78bfa" />
-      <Box position={[4.3, 0.95, -5.4]} size={[0.06, 0.25, 0.06]} color="#374151" />
-      <Box position={[5.35, 0.95, -5.4]} size={[0.06, 0.25, 0.06]} color="#374151" />
-      <Box position={[4.8, 0.86, -4.8]} size={[0.9, 0.03, 0.3]} color="#e5e7eb" />
-      <Box position={[5.45, 0.86, -4.8]} size={[0.15, 0.03, 0.22]} color="#e5e7eb" />
-      {/* Coffee mug */}
-      <Cyl position={[3.8, 0.92, -4.9]} args={[0.07, 0.06, 0.16]} color="#ef4444" />
-      {/* Chair */}
-      <Box position={[4.8, 0.5, -4.05]} size={[0.7, 0.1, 0.65]} color="#264653" />
-      <Box position={[4.8, 0.85, -3.75]} size={[0.7, 0.6, 0.08]} color="#264653" />
-      <Cyl position={[4.8, 0.25, -4.05]} args={[0.04, 0.04, 0.45]} color="#111827" />
-      <Cyl position={[4.8, 0.03, -4.05]} args={[0.32, 0.32, 0.05]} color="#111827" />
-      {/* AI orb (Gemini) */}
-      <mesh ref={orb} position={[3.7, 1.95, -5.2]}>
-        <icosahedronGeometry args={[0.16, 1]} />
-        <meshStandardMaterial color="#c4b5fd" emissive="#8b5cf6" emissiveIntensity={1.8} flatShading />
-      </mesh>
-      <pointLight position={[4.8, 1.6, -4.8]} intensity={4} distance={4} color="#7dd3fc" />
-      {/* Server rack */}
-      <Box position={[7, 0.9, -5.2]} size={[0.8, 1.8, 0.8]} color="#1f2937" metalness={0.3} roughness={0.5} />
+      {/* Click vào cụm bàn làm việc & máy tính (bàn, màn hình, phím chuột, AI orb) để xem bảng Kỹ Năng */}
+      <group
+        onClick={(e) => {
+          e.stopPropagation();
+          onDeskClick?.();
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = '';
+        }}
+      >
+        {/* Desk rotated facing right wall (+X) */}
+        <Box position={[7.35, 0.8, -3.2]} size={[1.1, 0.08, 2.4]} color="#7c584c" roughness={0.35} clearcoat={0.35} clearcoatRoughness={0.2} />
+        {[
+          [6.9, -4.25],
+          [7.8, -4.25],
+          [6.9, -2.15],
+          [7.8, -2.15],
+        ].map(([x, z]) => (
+          <Box key={`${x}${z}`} position={[x, 0.38, z]} size={[0.08, 0.76, 0.08]} color="#5d4037" />
+        ))}
+        {/* Dual monitors placed against right wall facing room center (-X) */}
+        <CodeScreen position={[7.75, 1.35, -3.7]} rotation={[0, -Math.PI / 2 + 0.1, 0]} color="#38bdf8" />
+        <CodeScreen position={[7.75, 1.35, -2.7]} rotation={[0, -Math.PI / 2 - 0.1, 0]} color="#a78bfa" />
+        <Box position={[7.75, 0.95, -3.7]} size={[0.06, 0.25, 0.06]} color="#374151" />
+        <Box position={[7.75, 0.95, -2.7]} size={[0.06, 0.25, 0.06]} color="#374151" />
+        {/* Keyboard & Mouse oriented facing the right wall */}
+        <Box position={[7.15, 0.86, -3.2]} size={[0.28, 0.03, 0.85]} color="#e5e7eb" />
+        <Box position={[7.15, 0.86, -2.55]} size={[0.22, 0.03, 0.15]} color="#e5e7eb" />
+        {/* Coffee mug */}
+        <Cyl position={[7.25, 0.92, -4.1]} args={[0.07, 0.06, 0.16]} color="#ef4444" roughness={0.2} clearcoat={0.6} />
+        {/* AI orb (Gemini) */}
+        <mesh ref={orb} position={[7.3, 1.95, -4.1]}>
+          <icosahedronGeometry args={[0.16, 1]} />
+          <meshStandardMaterial color="#c4b5fd" emissive="#8b5cf6" emissiveIntensity={1.8} flatShading />
+        </mesh>
+      </group>
+
+      {/* Ergonomic Office Chair facing right wall (+X) - Click để vịt ngồi vào ghế chơi game */}
+      <group
+        onClick={(e) => {
+          e.stopPropagation();
+          onChairClick?.();
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = '';
+        }}
+      >
+        <Box position={[6.2, 0.5, -3.2]} size={[0.65, 0.1, 0.7]} color="#264653" />
+        <Box position={[5.85, 0.85, -3.2]} size={[0.08, 0.6, 0.7]} color="#264653" />
+        <Cyl position={[6.2, 0.25, -3.2]} args={[0.04, 0.04, 0.45]} color="#111827" />
+        <Cyl position={[6.2, 0.03, -3.2]} args={[0.32, 0.32, 0.05]} color="#111827" />
+      </group>
+      <pointLight position={[6.8, 1.7, -3.2]} intensity={6.5} distance={6.5} color="#93c5fd" />
+      {/* Server rack in the corner */}
+      <Box position={[7.2, 0.9, -5.2]} size={[0.8, 1.8, 0.8]} color="#1f2937" metalness={0.3} roughness={0.5} />
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <BlinkLed
           key={i}
-          position={[6.7 + (i % 2) * 0.12, 0.4 + i * 0.24, -4.79]}
+          position={[6.9 + (i % 2) * 0.12, 0.4 + i * 0.24, -4.79]}
           color={i % 3 === 0 ? '#22c55e' : i % 3 === 1 ? '#38bdf8' : '#f59e0b'}
           speed={2 + i}
           offset={i}
         />
       ))}
       {/* Power strip under tech desk */}
-      <PowerStrip position={[3.7, 0.025, -4.4]} />
+      <PowerStrip position={[7.4, 0.025, -2.3]} />
       {/* Office wastebasket with crumpled test notes */}
-      <WasteBasket position={[3.35, 0.22, -4.75]} />
+      <WasteBasket position={[6.5, 0.22, -4.2]} />
     </group>
   );
 }
@@ -2238,7 +3424,7 @@ function ProjectBookshelf() {
       <Book pos={[7.46, 2.58, 2.66]} size={[0.3, 0.3, 0.06]} cover="#701a75" />
 
       {/* Soft warm library illumination */}
-      <pointLight position={[6.8, 3.0, 1.7]} intensity={3.5} distance={4.5} color="#fed7aa" />
+      <pointLight position={[6.8, 2.9, 1.7]} intensity={6.0} distance={7} color="#fed7aa" />
     </group>
   );
 }
@@ -2247,7 +3433,7 @@ function DoorMailbox({ onOpenGardenGame }: { onOpenGardenGame?: () => void }) {
   const env = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
     if (env.current) {
-      env.current.position.y = 1.85 + Math.sin(clock.elapsedTime * 2.2) * 0.12;
+      env.current.position.y = 1.28 + Math.sin(clock.elapsedTime * 2.2) * 0.05;
       env.current.rotation.y = Math.sin(clock.elapsedTime) * 0.5;
     }
   });
@@ -2313,37 +3499,129 @@ function DoorMailbox({ onOpenGardenGame }: { onOpenGardenGame?: () => void }) {
         </mesh>
         {/* Welcome Doormat */}
         <WelcomeDoormat />
-        {/* Doorway Billboard */}
+        {/* Biển chỉ dẫn "Ra Vườn (Game Mario)" đặt thanh lịch ngang tầm mắt trên cánh cửa */}
         {doorSignTex && (
-          <Billboard position={[0, 3.1, -5.85]}>
-            <mesh>
-              <planeGeometry args={[1.8, 0.45]} />
-              <meshBasicMaterial map={doorSignTex} transparent />
-            </mesh>
-          </Billboard>
+          <mesh position={[0, 2.05, -5.85]}>
+            <planeGeometry args={[1.4, 0.35]} />
+            <meshBasicMaterial map={doorSignTex} transparent />
+          </mesh>
         )}
       </group>
 
-      {/* Mailbox */}
-      <Cyl position={[1.5, 0.5, -5.2]} args={[0.05, 0.05, 1]} color="#4b5563" />
-      <Box position={[1.5, 1.1, -5.2]} size={[0.45, 0.4, 0.7]} color="#e63946" />
-      <mesh position={[1.5, 1.3, -5.2]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.225, 0.225, 0.7, 20, 1, false, 0, Math.PI]} />
-        <meshStandardMaterial color="#e63946" />
-      </mesh>
-      <Box position={[1.76, 1.35, -5.05]} size={[0.03, 0.35, 0.06]} color="#fbbf24" />
-      <Box position={[1.76, 1.5, -4.95]} size={[0.03, 0.12, 0.2]} color="#fbbf24" />
-      {/* Floating envelope */}
-      <group ref={env} position={[1.5, 1.85, -5.2]}>
-        <Box position={[0, 0, 0]} size={[0.5, 0.32, 0.03]} color="#ffffff" />
-        <mesh position={[0, 0.04, 0.02]} rotation={[0, 0, Math.PI]}>
-          <circleGeometry args={[0.2, 3]} />
-          <meshStandardMaterial color="#fbcfe8" side={THREE.DoubleSide} />
+      {/* Cây treo áo khoác & mũ cổ điển thanh lịch bên trái cửa chính */}
+      <group position={[-1.5, 0, -5.5]}>
+        {/* Chân đế ba chạc */}
+        <Cyl position={[0, 0.04, 0]} args={[0.22, 0.22, 0.06]} color="#4a2c17" />
+        {/* Thân trụ gỗ tiện tròn */}
+        <Cyl position={[0, 1.0, 0]} args={[0.04, 0.05, 1.9]} color="#5d4037" />
+        {/* Các móc treo mũ áo bằng đồng thau */}
+        {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((angle, idx) => (
+          <group key={idx} rotation={[0, angle, 0]}>
+            <mesh position={[0.1, 1.75, 0]} rotation={[0, 0, -Math.PI / 6]}>
+              <cylinderGeometry args={[0.015, 0.015, 0.16]} />
+              <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.25} />
+            </mesh>
+            <mesh position={[0.16, 1.82, 0]}>
+              <sphereGeometry args={[0.025, 12, 12]} />
+              <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.25} />
+            </mesh>
+          </group>
+        ))}
+        {/* Chiếc mũ phớt nâu treo trên một móc */}
+        <mesh position={[0.14, 1.78, 0]} rotation={[0.2, 0, -0.3]}>
+          <cylinderGeometry args={[0.1, 0.14, 0.08, 16]} />
+          <meshStandardMaterial color="#78350f" roughness={0.8} />
         </mesh>
-        <mesh position={[0, -0.02, 0.025]}>
-          <circleGeometry args={[0.05, 16]} />
-          <meshStandardMaterial color="#e11d48" emissive="#e11d48" emissiveIntensity={0.6} />
-        </mesh>
+      </group>
+
+      {/* Trạm Liên Hệ: Bàn console điện thoại quay số & Sổ ghi lời nhắn (bên phải cửa ra vào) */}
+      <group position={[1.5, 0, -5.2]}>
+        {/* Mặt bàn console gỗ óc chó bo tròn sang trọng */}
+        <Box position={[0, 0.8, 0]} size={[1.1, 0.08, 0.52]} color="#5d4037" roughness={0.7} />
+        <Box position={[0, 0.84, 0]} size={[1.14, 0.02, 0.54]} color="#795548" roughness={0.6} />
+
+        {/* 4 chân bàn thanh mảnh bịt đồng vàng cao cấp */}
+        {[
+          [-0.46, -0.2],
+          [0.46, -0.2],
+          [-0.46, 0.2],
+          [0.46, 0.2],
+        ].map(([x, z], i) => (
+          <group key={i}>
+            <Box position={[x, 0.4, z]} size={[0.06, 0.76, 0.06]} color="#3e2723" roughness={0.8} />
+            <Box position={[x, 0.04, z]} size={[0.068, 0.08, 0.068]} color="#fbbf24" metalness={0.85} roughness={0.25} />
+          </group>
+        ))}
+
+        {/* Ngăn kệ phụ bên dưới bàn */}
+        <Box position={[0, 0.24, 0]} size={[0.96, 0.03, 0.4]} color="#4e342e" roughness={0.75} />
+        {/* Khay đan nhỏ đựng vật dụng trang trí */}
+        <Box position={[-0.2, 0.27, 0]} size={[0.3, 0.04, 0.22]} color="#a16207" roughness={0.9} />
+
+        {/* --- CHIẾC ĐIỆN THOẠI QUAY SỐ CỔ ĐIỂN (VINTAGE ROTARY TELEPHONE) --- */}
+        <group position={[-0.22, 0.85, 0.02]}>
+          {/* Thân máy điện thoại đỏ ruby sẫm vintage */}
+          <Box position={[0, 0.045, 0]} size={[0.26, 0.09, 0.22]} color="#881337" roughness={0.4} />
+          {/* Đĩa số quay tròn màu kem và viền kim loại vàng */}
+          <mesh position={[0, 0.07, 0.06]} rotation={[-Math.PI / 4, 0, 0]}>
+            <circleGeometry args={[0.065, 24]} />
+            <meshStandardMaterial color="#fef3c7" roughness={0.3} />
+          </mesh>
+          <mesh position={[0, 0.072, 0.062]} rotation={[-Math.PI / 4, 0, 0]}>
+            <ringGeometry args={[0.045, 0.065, 24]} />
+            <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.2} />
+          </mesh>
+          {/* Càng đỡ ống nghe bằng đồng thau */}
+          <Box position={[-0.07, 0.1, -0.02]} size={[0.02, 0.05, 0.02]} color="#fbbf24" metalness={0.85} roughness={0.2} />
+          <Box position={[0.07, 0.1, -0.02]} size={[0.02, 0.05, 0.02]} color="#fbbf24" metalness={0.85} roughness={0.2} />
+          {/* Ống nghe đặt ngang trên giá */}
+          <Cyl position={[0, 0.13, -0.02]} args={[0.02, 0.02, 0.26]} rotation={[0, 0, Math.PI / 2]} color="#881337" />
+          <Cyl position={[-0.12, 0.13, -0.02]} args={[0.045, 0.03, 0.04]} rotation={[0, 0, Math.PI / 2]} color="#fbbf24" metalness={0.8} />
+          <Cyl position={[0.12, 0.13, -0.02]} args={[0.03, 0.045, 0.04]} rotation={[0, 0, Math.PI / 2]} color="#fbbf24" metalness={0.8} />
+        </group>
+
+        {/* --- SỔ GHI LỜI NHẮN & BÚT MÁY (GUESTBOOK / MESSAGE PAD) --- */}
+        <group position={[0.2, 0.85, 0.04]}>
+          {/* Bìa da nâu sậm mở sẵn */}
+          <Box position={[0, 0.01, 0]} size={[0.3, 0.02, 0.24]} color="#78350f" roughness={0.7} />
+          {/* Trang giấy màu kem thanh nhã */}
+          <Box position={[0, 0.022, 0]} size={[0.27, 0.01, 0.21]} color="#fffbeb" roughness={0.9} />
+          {/* Dải ruy băng đánh dấu trang màu vàng gold */}
+          <Box position={[0, 0.03, 0]} size={[0.025, 0.006, 0.23]} color="#fbbf24" />
+          {/* Lọ mực và bút máy cắm nghiêng */}
+          <Cyl position={[0.16, 0.025, -0.09]} args={[0.025, 0.03, 0.04]} color="#fbbf24" metalness={0.85} roughness={0.25} />
+          <mesh position={[0.16, 0.08, -0.09]} rotation={[0.3, 0, 0.35]}>
+            <cylinderGeometry args={[0.006, 0.004, 0.14]} />
+            <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.3} />
+          </mesh>
+        </group>
+
+        {/* --- ĐÈN BÀN ẤM ÁP (COZY WARM ENTRY LAMP) --- */}
+        <group position={[0.38, 0.85, -0.16]}>
+          {/* Chân đèn đồng thau */}
+          <Cyl position={[0, 0.015, 0]} args={[0.07, 0.07, 0.03]} color="#fbbf24" metalness={0.85} roughness={0.25} />
+          <Cyl position={[0, 0.18, 0]} args={[0.014, 0.014, 0.34]} color="#fbbf24" metalness={0.85} roughness={0.25} />
+          {/* Chao đèn vải ấm áp hình nón */}
+          <mesh position={[0, 0.35, 0]}>
+            <cylinderGeometry args={[0.08, 0.14, 0.15, 20]} />
+            <meshStandardMaterial color="#fef3c7" roughness={0.8} />
+          </mesh>
+          {/* Ánh sáng vàng dịu êm tỏa xuống bàn liên hệ */}
+          <pointLight position={[0, 0.32, 0]} intensity={1.8} distance={2.4} color="#fde047" />
+        </group>
+
+        {/* Biểu tượng phong bì thư lơ lửng phát sáng nhận diện trạm Liên Hệ */}
+        <group ref={env} position={[0, 1.28, 0]}>
+          <Box position={[0, 0, 0]} size={[0.46, 0.3, 0.03]} color="#ffffff" roughness={0.5} />
+          <mesh position={[0, 0.035, 0.02]} rotation={[0, 0, Math.PI]}>
+            <circleGeometry args={[0.18, 3]} />
+            <meshStandardMaterial color="#fbcfe8" side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, -0.02, 0.025]}>
+            <circleGeometry args={[0.045, 16]} />
+            <meshStandardMaterial color="#e11d48" emissive="#e11d48" emissiveIntensity={0.8} />
+          </mesh>
+        </group>
       </group>
     </group>
   );
@@ -2361,39 +3639,178 @@ const FURNITURE: Record<StationKey, React.FC> = {
 /* Station wrapper (click target + ring + label)                       */
 /* ------------------------------------------------------------------ */
 
+function useStationHaloTexture(color: string) {
+  return useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const grad = ctx.createRadialGradient(128, 128, 12, 128, 128, 128);
+    grad.addColorStop(0, color);
+    grad.addColorStop(0.35, color);
+    grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.15)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 256, 256);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, [color]);
+}
+
+function useStationBeamTexture() {
+  return useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const grad = ctx.createLinearGradient(0, 256, 0, 0);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+    grad.addColorStop(0.28, 'rgba(255, 255, 255, 0.35)');
+    grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.1)');
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 256);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+}
+
 function InteractRing({ def, active }: { def: StationDef; active: boolean }) {
-  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  const haloMat = useRef<THREE.MeshBasicMaterial>(null);
+  const ringMat = useRef<THREE.MeshBasicMaterial>(null);
+  const beamMat = useRef<THREE.MeshBasicMaterial>(null);
+  const outerRingMat = useRef<THREE.MeshBasicMaterial>(null);
+  const outerRingMesh = useRef<THREE.Mesh>(null);
   const grp = useRef<THREE.Group>(null);
+
+  const haloTex = useStationHaloTexture(def.color);
+  const beamTex = useStationBeamTexture();
+
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
-    if (mat.current) mat.current.opacity = active ? 0.9 : 0.35 + Math.sin(t * 3) * 0.15;
-    if (grp.current) grp.current.scale.setScalar(active ? 1.15 + Math.sin(t * 6) * 0.05 : 1);
+    const pulse = Math.sin(t * 2.5) * 0.5 + 0.5;
+
+    if (haloMat.current) {
+      haloMat.current.opacity = active ? 0.65 + pulse * 0.2 : 0.28 + pulse * 0.12;
+    }
+    if (ringMat.current) {
+      ringMat.current.opacity = active ? 0.95 : 0.45 + pulse * 0.15;
+    }
+    if (beamMat.current) {
+      beamMat.current.opacity = active ? 0.55 + pulse * 0.15 : 0.20 + pulse * 0.08;
+    }
+    if (outerRingMat.current) {
+      outerRingMat.current.opacity = active ? 0.75 : 0.25 + pulse * 0.1;
+    }
+    if (outerRingMesh.current) {
+      outerRingMesh.current.rotation.z = t * 0.4;
+    }
+    if (grp.current) {
+      grp.current.scale.setScalar(active ? 1.08 + Math.sin(t * 5) * 0.03 : 1);
+    }
   });
+
   return (
-    <group ref={grp} position={[def.interact[0], 0.02, def.interact[1]]}>
-      <mesh rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[0.5, 0.64, 40]} />
-        <meshBasicMaterial ref={mat} color={def.color} transparent opacity={0.4} />
+    <group ref={grp} position={[def.interact[0], 0.008, def.interact[1]]}>
+      {/* 1. Quầng sáng hào quang mềm mại lan tỏa trên mặt sàn */}
+      {haloTex && (
+        <mesh rotation-x={-Math.PI / 2} position-y={0.001}>
+          <planeGeometry args={[1.7, 1.7]} />
+          <meshBasicMaterial
+            ref={haloMat}
+            map={haloTex}
+            transparent
+            opacity={0.3}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+
+      {/* 2. Cột quầng sáng hình nón cụt hắt nhẹ nhàng lên từ nền không gian */}
+      {beamTex && (
+        <mesh position={[0, 0.24, 0]}>
+          <cylinderGeometry args={[0.42, 0.62, 0.48, 32, 1, true]} />
+          <meshBasicMaterial
+            ref={beamMat}
+            map={beamTex}
+            color={def.color}
+            transparent
+            opacity={0.22}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+
+      {/* 3. Vòng tròn sáng chính tâm danh mục */}
+      <mesh rotation-x={-Math.PI / 2} position-y={0.003}>
+        <ringGeometry args={[0.48, 0.58, 48]} />
+        <meshBasicMaterial ref={ringMat} color={def.color} transparent opacity={0.5} />
       </mesh>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.004}>
-        <circleGeometry args={[0.5, 40]} />
-        <meshBasicMaterial color={def.color} transparent opacity={0.12} />
+
+      {/* 4. Vòng tròn ngoài xoay nhẹ */}
+      <mesh ref={outerRingMesh} rotation-x={-Math.PI / 2} position-y={0.003}>
+        <ringGeometry args={[0.72, 0.76, 48]} />
+        <meshBasicMaterial ref={outerRingMat} color={def.color} transparent opacity={0.3} />
+      </mesh>
+
+      {/* 5. Đĩa tâm trong suốt nhẹ */}
+      <mesh rotation-x={-Math.PI / 2} position-y={0.002}>
+        <circleGeometry args={[0.48, 48]} />
+        <meshBasicMaterial color={def.color} transparent opacity={0.10} />
       </mesh>
     </group>
   );
 }
 
-function StationLabel({ def, active }: { def: StationDef; active: boolean }) {
-  const tex = useMemo(() => {
-    if (typeof document === 'undefined') return null;
+function StationLabel({
+  def,
+  active,
+  onClick,
+}: {
+  def: StationDef;
+  active: boolean;
+  onClick?: (e: ThreeEvent<MouseEvent>) => void;
+}) {
+  const { tex, planeW, planeH } = useMemo(() => {
+    if (typeof document === 'undefined') return { tex: null, planeW: 1.25, planeH: 0.38 };
     const canvas = document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 160;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.clearRect(0, 0, 640, 160);
+    if (!ctx) return { tex: null, planeW: 1.25, planeH: 0.38 };
 
-    const x = 20, y = 20, w = 600, h = 120, r = 60;
+    const fontStr = 'bold 44px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = fontStr;
+    const text = `${def.emoji}  ${def.label}`;
+    const textW = ctx.measureText(text).width;
+
+    const padX = 36;
+    const pillH = 92;
+    const pillW = Math.max(240, Math.round(textW + padX * 2));
+    const padMargin = 14;
+    canvas.width = pillW + padMargin * 2;
+    canvas.height = pillH + padMargin * 2;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = fontStr;
+
+    const x = padMargin;
+    const y = padMargin;
+    const w = pillW;
+    const h = pillH;
+    const r = h / 2;
+
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -2402,29 +3819,52 @@ function StationLabel({ def, active }: { def: StationDef; active: boolean }) {
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
 
-    ctx.fillStyle = active ? 'rgba(15, 23, 42, 0.96)' : 'rgba(15, 23, 42, 0.88)';
+    // Hơi trong suốt (Semi-transparent frosted glass pill)
+    ctx.fillStyle = active ? 'rgba(15, 23, 42, 0.70)' : 'rgba(15, 23, 42, 0.50)';
     ctx.fill();
-    ctx.lineWidth = active ? 10 : 7;
-    ctx.strokeStyle = def.color;
+    ctx.lineWidth = active ? 6 : 4;
+    ctx.strokeStyle = active ? def.color : `${def.color}dd`;
     ctx.stroke();
 
-    ctx.font = 'bold 46px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = active ? '#ffffff' : '#f1f5f9';
+    // Text with soft shadow for crisp legibility over transparent backdrop
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = active ? '#ffffff' : '#f8fafc';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${def.emoji} ${def.label}`, 320, 80);
+    ctx.fillText(text, x + w / 2, y + h / 2);
+    ctx.restore();
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
-    return texture;
+
+    const baseH = active ? 0.44 : 0.38;
+    const baseW = baseH * (canvas.width / canvas.height);
+
+    return { tex: texture, planeW: baseW, planeH: baseH };
   }, [def.color, def.emoji, def.label, active]);
 
   if (!tex) return null;
   return (
     <Billboard position={def.labelAt}>
-      <mesh>
-        <planeGeometry args={[active ? 2.35 : 2.05, active ? 0.58 : 0.51]} />
-        <meshBasicMaterial map={tex} transparent />
+      <mesh
+        onClick={onClick}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = '';
+        }}
+      >
+        <planeGeometry args={[planeW, planeH]} />
+        <meshBasicMaterial
+          map={tex}
+          transparent
+          opacity={active ? 0.96 : 0.88}
+          depthWrite={false}
+        />
       </mesh>
     </Billboard>
   );
@@ -2437,6 +3877,8 @@ function Station({
   timeConfig,
   isDimmed = false,
   onSofaClick,
+  onChairClick,
+  onDeskClick,
   hideLabel = false,
 }: {
   def: StationDef;
@@ -2445,12 +3887,22 @@ function Station({
   timeConfig?: TimeConfig;
   isDimmed?: boolean;
   onSofaClick?: () => void;
+  onChairClick?: () => void;
+  onDeskClick?: () => void;
   hideLabel?: boolean;
 }) {
   const Furniture = FURNITURE[def.key];
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    if (def.key === 'overview') {
+      onSofaClick?.();
+      return;
+    }
+    if (def.key === 'skills') {
+      onDeskClick?.();
+      return;
+    }
     nav.target = def.interact;
     nav.pending = def.key;
   };
@@ -2458,7 +3910,7 @@ function Station({
   return (
     <group>
       <group
-        onClick={def.key === 'overview' ? undefined : handleClick}
+        onClick={handleClick}
         onPointerOver={(e) => {
           if (def.key !== 'overview') {
             e.stopPropagation();
@@ -2475,12 +3927,14 @@ function Station({
           <DoorMailbox onOpenGardenGame={onOpenGardenGame} />
         ) : def.key === 'overview' ? (
           <LivingRoom timeConfig={timeConfig} isDimmed={isDimmed} onSofaClick={onSofaClick} />
+        ) : def.key === 'skills' ? (
+          <TechLab onChairClick={onChairClick} onDeskClick={onDeskClick} />
         ) : (
           <Furniture />
         )}
       </group>
       <InteractRing def={def} active={active} />
-      {!hideLabel && <StationLabel def={def} active={active} />}
+      {!hideLabel && <StationLabel def={def} active={active} onClick={handleClick} />}
     </group>
   );
 }
@@ -2510,22 +3964,27 @@ function World({
 
   // Trạng thái vịt ngủ & nằm thư giãn ghế lười & sofa:
   // Mặc định khi mới mở Web hoặc từ mini game quay lại: Vịt ở ghế lười!
-  // Ban đêm: Vịt ngủ trên ghế lười (isSleeping = true, isLounging = false)
-  // Ban ngày: Vịt nằm thư giãn ngắm nhà & đeo kính râm (isLounging = true, isSleeping = false)
+  // Ban đêm: Vịt ngủ trên ghế lười (isSleeping = true, isLounging = false, isGaming = false)
+  // Ban ngày: Vịt không ngủ! Nằm thư giãn ngắm nhà & đeo kính râm hoặc chơi game máy tính
   const isNightInitial = activePhase === 'night';
   const [isSleeping, setIsSleeping] = useState(isNightInitial);
   const [isLounging, setIsLounging] = useState(!isNightInitial);
+  const [isGaming, setIsGaming] = useState(false);
   const [duckSpot, setDuckSpot] = useState<DuckSpot>('beanbag');
   const [sleepPose, setSleepPose] = useState<SleepPose>('side');
+  const [bubbleMode, setBubbleMode] = useState<'thought' | 'speech'>('thought');
 
   const isSleepingRef = useRef(isNightInitial);
   const isLoungingRef = useRef(!isNightInitial);
+  const isGamingRef = useRef(false);
   const duckSpotRef = useRef<DuckSpot>('beanbag');
   const sleepPoseRef = useRef<SleepPose>('side');
   const targetSpot = useRef<DuckSpot | null>(null);
+  const targetSpotReason = useRef<'click' | 'idle_sleep' | 'idle_chill' | 'idle_game'>('click');
 
   isSleepingRef.current = isSleeping;
   isLoungingRef.current = isLounging;
+  isGamingRef.current = isGaming;
   duckSpotRef.current = duckSpot;
   sleepPoseRef.current = sleepPose;
 
@@ -2533,6 +3992,7 @@ function World({
     moving: false,
     lounging: !isNightInitial,
     sleeping: isNightInitial,
+    gaming: false,
     spot: 'beanbag',
     sleepPose: 'side',
   });
@@ -2547,8 +4007,18 @@ function World({
 
   // Cuộn chuột để quay về chế độ thường khi đang zoom cận cảnh
   const manualZoomOut = useRef(false);
+  const manualZoomStation = useRef<StationKey | null>(null);
+  const manualZoomDuckPos = useRef<[number, number]>([0, 0]);
+  const userZoom = useRef(1.0);
+  const targetZoom = useRef(1.0);
+  // Đè nút cuộn chuột (middle mouse button) để thay đổi nhẹ góc nhìn camera lên/xuống (pitch tilt)
+  const userPitch = useRef(0);
+  const targetPitch = useRef(0);
+  const stayInOverview = useRef(false);
+  const prevOpenStation = useRef<StationKey | null>(null);
   const lastDuckPos = useRef<[number, number]>([4.70, 3.62]);
   const lastClosestStation = useRef<StationKey | null>(null);
+  const closedStationKey = useRef<StationKey | null>(null);
 
   const lastActiveTime = useRef(performance.now());
 
@@ -2629,10 +4099,18 @@ function World({
       isSleepingRef.current = false;
       onSleepChange?.(false);
       duckAudio.playJumpSound();
+      if (duckSpotRef.current === 'beanbag') {
+        setIsLounging(true);
+        isLoungingRef.current = true;
+      }
+    }
+    if (isGamingRef.current) {
+      setIsGaming(false);
+      isGamingRef.current = false;
     }
   }, [onSleepChange]);
 
-  // Khi mở bảng "Về Tôi" (overview): tự động cho vịt trèo lên sofa như hình!
+  // Khi mở bảng "Về Tôi" (overview) hoặc "Kỹ Năng" (skills): tự động đưa vịt vào vị trí tương ứng
   useEffect(() => {
     if (openStationKey === 'overview') {
       wakeUp();
@@ -2641,6 +4119,8 @@ function World({
       setDuckSpot('sofa');
       isLoungingRef.current = false;
       setIsLounging(false);
+      isGamingRef.current = false;
+      setIsGaming(false);
       targetSpot.current = null;
       nav.target = null;
       nav.pending = null;
@@ -2648,6 +4128,23 @@ function World({
       if (duckRef.current) {
         duckRef.current.position.set(-5.3, 0.76, -4.8);
         duckRef.current.rotation.set(0, 0.15, 0);
+      }
+    } else if (openStationKey === 'skills') {
+      wakeUp();
+      manualZoomOut.current = false;
+      duckSpotRef.current = 'computer';
+      setDuckSpot('computer');
+      setIsGaming(true);
+      isGamingRef.current = true;
+      isLoungingRef.current = false;
+      setIsLounging(false);
+      targetSpot.current = null;
+      nav.target = null;
+      nav.pending = null;
+      duckAudio.playJumpSound();
+      if (duckRef.current) {
+        duckRef.current.position.set(6.25, 0.58, -3.2);
+        duckRef.current.rotation.set(0, Math.PI / 2, 0);
       }
     }
   }, [openStationKey, wakeUp]);
@@ -2657,73 +4154,289 @@ function World({
     manualZoomOut.current = false;
     if (duckSpotRef.current === 'beanbag') {
       input.quackAt = performance.now() / 1000;
+      if (!timeConfig.isNight && isSleepingRef.current) {
+        setIsSleeping(false);
+        isSleepingRef.current = false;
+        onSleepChange?.(false);
+        setIsLounging(true);
+        isLoungingRef.current = true;
+        duckAudio.playJumpSound();
+      }
       return;
     }
+    duckSpotRef.current = 'floor';
+    setDuckSpot('floor');
+    isLoungingRef.current = false;
+    setIsLounging(false);
+    isGamingRef.current = false;
+    setIsGaming(false);
+    if (duckRef.current) {
+      duckRef.current.position.y = 0;
+      duckRef.current.rotation.x = 0;
+    }
+    targetSpotReason.current = 'click';
     targetSpot.current = 'beanbag';
     nav.target = [4.70, 3.66];
     nav.pending = null;
     sleepPoseRef.current = Math.random() > 0.5 ? 'side' : 'prone';
     setSleepPose(sleepPoseRef.current);
-  }, [wakeUp]);
+  }, [wakeUp, timeConfig.isNight, onSleepChange]);
 
   const handleSofaClick = useCallback(() => {
     wakeUp();
     manualZoomOut.current = false;
-    onArrive('overview');
     if (duckSpotRef.current === 'sofa') {
       input.quackAt = performance.now() / 1000;
+      onArrive('overview');
       return;
+    }
+    duckSpotRef.current = 'floor';
+    setDuckSpot('floor');
+    isLoungingRef.current = false;
+    setIsLounging(false);
+    isGamingRef.current = false;
+    setIsGaming(false);
+    if (duckRef.current) {
+      duckRef.current.position.y = 0;
+      duckRef.current.rotation.x = 0;
     }
     targetSpot.current = 'sofa';
     nav.target = [-5.0, -2.2];
-    nav.pending = null;
+    nav.pending = 'overview';
     sleepPoseRef.current = Math.random() > 0.5 ? 'side' : 'prone';
     setSleepPose(sleepPoseRef.current);
   }, [wakeUp, onArrive]);
 
+  const handleChairClick = useCallback(() => {
+    wakeUp();
+    manualZoomOut.current = false;
+    if (duckSpotRef.current === 'computer') {
+      input.quackAt = performance.now() / 1000;
+      return;
+    }
+    duckSpotRef.current = 'floor';
+    setDuckSpot('floor');
+    isLoungingRef.current = false;
+    setIsLounging(false);
+    isGamingRef.current = false;
+    setIsGaming(false);
+    if (duckRef.current) {
+      duckRef.current.position.y = 0;
+      duckRef.current.rotation.x = 0;
+    }
+    targetSpotReason.current = 'click';
+    targetSpot.current = 'computer';
+    nav.target = [5.0, -3.2];
+    nav.pending = null;
+  }, [wakeUp]);
+
+  const handleDeskClick = useCallback(() => {
+    wakeUp();
+    manualZoomOut.current = false;
+    if (duckSpotRef.current === 'computer') {
+      input.quackAt = performance.now() / 1000;
+      onArrive('skills');
+      return;
+    }
+    duckSpotRef.current = 'floor';
+    setDuckSpot('floor');
+    isLoungingRef.current = false;
+    setIsLounging(false);
+    isGamingRef.current = false;
+    setIsGaming(false);
+    if (duckRef.current) {
+      duckRef.current.position.y = 0;
+      duckRef.current.rotation.x = 0;
+    }
+    targetSpotReason.current = 'click';
+    targetSpot.current = 'computer';
+    nav.target = [5.0, -3.2];
+    nav.pending = 'skills';
+  }, [wakeUp, onArrive]);
+
   useEffect(() => {
+    let isMiddleDragging = false;
+    let lastMiddleY = 0;
+
     const handleWheel = (e: WheelEvent) => {
+      lastActiveTime.current = performance.now();
+      input.notifyInteract();
+
       // Nếu đang cuộn trong nội dung văn bản của bảng sidePanel thì không can thiệp
       const target = e.target as HTMLElement | null;
       if (target && target.closest('[class*="sidePanel"]')) {
         return;
       }
 
+      e.preventDefault();
+
+      const delta = e.deltaY * 0.0015;
+      targetZoom.current = Math.min(1.5, Math.max(0.48, targetZoom.current + delta));
+
       if (e.deltaY > 0) {
-        // Cuộn chuột xuống (zoom out) -> quay về chế độ thường!
-        if (openStationKey && onCloseStation) {
-          onCloseStation();
-        }
+        // Cuộn xuống = THU NHỎ (Zoom out lên tới 1.5 lần so với mặc định)
         manualZoomOut.current = true;
+        if (lastClosestStation.current) {
+          manualZoomStation.current = lastClosestStation.current;
+        }
         if (duckRef.current) {
-          lastDuckPos.current = [duckRef.current.position.x, duckRef.current.position.z];
+          manualZoomDuckPos.current = [duckRef.current.position.x, duckRef.current.position.z];
         }
       } else if (e.deltaY < 0) {
-        // Cuộn chuột lên (zoom in) -> cho phép zoom cận cảnh lại
-        manualZoomOut.current = false;
+        // Cuộn lên = PHÓNG TO (Zoom in)
+        if (targetZoom.current < 0.88) {
+          manualZoomOut.current = false;
+          manualZoomStation.current = null;
+        }
       }
     };
 
-    window.addEventListener('wheel', handleWheel, { passive: true });
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, [openStationKey, onCloseStation]);
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button === 1) { // Đè nút cuộn chuột (Middle Mouse Button)
+        e.preventDefault();
+        isMiddleDragging = true;
+        lastMiddleY = e.clientY;
+        document.body.style.cursor = 'ns-resize';
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isMiddleDragging) {
+        e.preventDefault();
+        lastActiveTime.current = performance.now();
+        input.notifyInteract();
+        const deltaY = e.movementY !== undefined && e.movementY !== 0 ? e.movementY : e.clientY - lastMiddleY;
+        lastMiddleY = e.clientY;
+        // Di chuyển chuột lên (deltaY < 0): ngẩng góc nhìn lên / nhìn trực diện hơn
+        // Di chuyển chuột xuống (deltaY > 0): nhìn dốc từ trên cao xuống
+        const sensitivity = 0.0035;
+        targetPitch.current = clamp(targetPitch.current + deltaY * sensitivity, -0.32, 0.32);
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (e.button === 1 || isMiddleDragging) {
+        isMiddleDragging = false;
+        document.body.style.cursor = '';
+      }
+    };
+
+    const handleAuxClick = (e: MouseEvent) => {
+      if (e.button === 1) {
+        e.preventDefault(); // Ngăn trình duyệt bật biểu tượng autoscroll cuộn trang của Windows
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      lastActiveTime.current = performance.now();
+      input.notifyInteract();
+
+      if (e.code === 'Escape' && !openStationKey) {
+        manualZoomOut.current = true;
+        if (lastClosestStation.current) {
+          manualZoomStation.current = lastClosestStation.current;
+        }
+        if (duckRef.current) {
+          manualZoomDuckPos.current = [duckRef.current.position.x, duckRef.current.position.z];
+        }
+        targetZoom.current = 1.0;
+        targetPitch.current = 0; // Reset góc nhìn về chuẩn
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('auxclick', handleAuxClick);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('auxclick', handleAuxClick);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openStationKey]);
+
+  useEffect(() => {
+    // 1. Khi vừa mở một mục: reset mức zoom về 1.0 chuẩn của mục đó
+    if (openStationKey) {
+      targetZoom.current = 1.0;
+      closedStationKey.current = null;
+      manualZoomOut.current = false;
+      manualZoomStation.current = null;
+    }
+
+    // 2. Khi người dùng tắt bảng tin (đang mở một mục -> đóng bảng):
+    // Tự động chuyển camera về view toàn cảnh để người dùng dễ dàng nhìn thấy toàn bộ nhà và điều khiển vịt
+    if (prevOpenStation.current && !openStationKey) {
+      const closed = prevOpenStation.current;
+      targetZoom.current = 1.0;
+      stayInOverview.current = true;
+      closedStationKey.current = closed;
+
+      // Nếu vừa xem mục "Về Tôi" (overview) hoặc vịt đang trên ghế sofa:
+      // Tự động cho vịt nhảy xuống sàn ngay trước sofa để người dùng dễ dàng điều khiển vịt đi tiếp!
+      if (closed === 'overview' || duckSpotRef.current === 'sofa') {
+        duckSpotRef.current = 'floor';
+        setDuckSpot('floor');
+        isLoungingRef.current = false;
+        setIsLounging(false);
+        targetSpot.current = null;
+        duckAudio.playJumpSound();
+        if (duckRef.current) {
+          duckRef.current.position.set(-5.0, 0, -2.2);
+          duckRef.current.rotation.set(0, 0, 0);
+        }
+      } else if (closed === 'skills' || duckSpotRef.current === 'computer') {
+        duckSpotRef.current = 'floor';
+        setDuckSpot('floor');
+        isGamingRef.current = false;
+        setIsGaming(false);
+        targetSpot.current = null;
+        duckAudio.playJumpSound();
+        if (duckRef.current) {
+          duckRef.current.position.set(5.5, 0, -3.2);
+          duckRef.current.rotation.set(0, 0, 0);
+        }
+      }
+
+      // Ghi nhận vị trí vịt SAU KHI vịt đã ở đúng vị trí sàn (đặc biệt quan trọng cho overview khi vịt nhảy từ sofa xuống sàn),
+      // tránh việc tính moved sai lệch khiến stayInOverview bị hủy ngay lập tức ở frame đầu tiên!
+      if (duckRef.current) {
+        lastDuckPos.current = [duckRef.current.position.x, duckRef.current.position.z];
+      }
+    }
+
+    prevOpenStation.current = openStationKey ?? null;
+  }, [openStationKey]);
 
   const handleFloorClick = (e: ThreeEvent<MouseEvent>) => {
     if (paused) return;
     wakeUp();
+    lastActiveTime.current = performance.now();
+    input.notifyInteract();
+    targetSpot.current = null;
     if (duckSpotRef.current !== 'floor') {
       const wasOnSofa = duckSpotRef.current === 'sofa';
+      const wasOnComputer = duckSpotRef.current === 'computer';
       duckSpotRef.current = 'floor';
       setDuckSpot('floor');
       isLoungingRef.current = false;
       setIsLounging(false);
-      targetSpot.current = null;
+      isGamingRef.current = false;
+      setIsGaming(false);
       if (duckRef.current) {
         duckRef.current.position.y = 0;
         duckRef.current.rotation.x = 0;
         if (wasOnSofa) {
           duckRef.current.position.x = -5.0;
           duckRef.current.position.z = -2.2;
+        } else if (wasOnComputer) {
+          duckRef.current.position.x = 5.5;
+          duckRef.current.position.z = -3.2;
         }
       }
     }
@@ -2733,7 +4446,6 @@ function World({
     nav.pending = null;
     markerAge.current = 0;
     marker.current?.position.set(x, 0.03, z);
-    manualZoomOut.current = false;
   };
 
   useFrame((state, rawDt) => {
@@ -2751,6 +4463,15 @@ function World({
       nav.teleport = null;
       nav.target = null;
       nav.pending = null;
+      wakeUp();
+      duckSpotRef.current = 'floor';
+      setDuckSpot('floor');
+      isLoungingRef.current = false;
+      setIsLounging(false);
+      isGamingRef.current = false;
+      setIsGaming(false);
+      p.y = 0;
+      duck.rotation.x = 0;
     }
 
     let dx = 0;
@@ -2773,22 +4494,44 @@ function World({
       targetSpot.current = null;
       if (duckSpotRef.current !== 'floor') {
         const wasOnSofa = duckSpotRef.current === 'sofa';
+        const wasOnComputer = duckSpotRef.current === 'computer';
         duckSpotRef.current = 'floor';
         setDuckSpot('floor');
         isLoungingRef.current = false;
         setIsLounging(false);
+        isGamingRef.current = false;
+        setIsGaming(false);
         p.y = 0;
         duck.rotation.x = 0;
         if (wasOnSofa) {
           p.x = -5.0;
           p.z = -2.2;
+        } else if (wasOnComputer) {
+          p.x = 5.5;
+          p.z = -3.2;
         }
       }
     } else if (nav.target && !paused) {
+      if (duckSpotRef.current !== 'floor') {
+        wakeUp();
+        duckSpotRef.current = 'floor';
+        setDuckSpot('floor');
+        isLoungingRef.current = false;
+        setIsLounging(false);
+        isGamingRef.current = false;
+        setIsGaming(false);
+        p.y = 0;
+        duck.rotation.x = 0;
+      }
+      if (nav.pending === 'overview' && targetSpot.current !== 'sofa') {
+        targetSpot.current = 'sofa';
+      } else if (nav.pending === 'skills' && targetSpot.current !== 'computer') {
+        targetSpot.current = 'computer';
+      }
       const tx = nav.target[0] - p.x;
       const tz = nav.target[1] - p.z;
       const d = Math.hypot(tx, tz);
-      if (d < 0.12) {
+      if (d < 0.25) {
         nav.target = null;
         const pend = nav.pending;
         nav.pending = null;
@@ -2805,17 +4548,30 @@ function World({
       const d = Math.hypot(p.x - 4.70, p.z - 3.66);
       if (d < 0.55) {
         targetSpot.current = null;
+        targetSpotReason.current = 'click';
         nav.target = null;
         duckSpotRef.current = 'beanbag';
         setDuckSpot('beanbag');
         duckAudio.playJumpSound();
+        setIsGaming(false);
+        isGamingRef.current = false;
         if (timeConfig.isNight) {
           setIsSleeping(true);
           isSleepingRef.current = true;
           onSleepChange?.(true);
+          setIsLounging(false);
+          isLoungingRef.current = false;
         } else {
+          // Ban ngày tuyệt đối không ngủ: Vịt nằm thư giãn / chill trên ghế lười, đeo kính râm
+          setIsSleeping(false);
+          isSleepingRef.current = false;
+          onSleepChange?.(false);
           setIsLounging(true);
           isLoungingRef.current = true;
+        }
+        if (!sleepPoseRef.current) {
+          sleepPoseRef.current = Math.random() > 0.5 ? 'side' : 'prone';
+          setSleepPose(sleepPoseRef.current);
         }
       }
     }
@@ -2830,38 +4586,132 @@ function World({
         setDuckSpot('sofa');
         duckAudio.playJumpSound();
         onArrive('overview');
+        setIsGaming(false);
+        isGamingRef.current = false;
+        setIsLounging(false);
+        isLoungingRef.current = false;
         if (timeConfig.isNight) {
           setIsSleeping(true);
           isSleepingRef.current = true;
           onSleepChange?.(true);
-        }
-      }
-    }
-
-    // 3. Tự động đi ngủ tại Sofa hoặc Ghế lười nếu đêm và idle > 18s
-    if (timeConfig.isNight && !isSleepingRef.current) {
-      const idle = performance.now() - Math.max(lastActiveTime.current, input.lastInteractAt);
-      if (idle > 18000 && !targetSpot.current) {
-        if (duckSpotRef.current === 'floor') {
-          // Đi tới giường gần nhất: Sofa hoặc Ghế lười
-          const dSofa = Math.hypot(p.x - (-5.0), p.z - (-2.2));
-          const dBean = Math.hypot(p.x - 4.70, p.z - 3.66);
-          const chosen: DuckSpot = dSofa <= dBean ? 'sofa' : 'beanbag';
-          targetSpot.current = chosen;
-          nav.target = chosen === 'sofa' ? [-5.0, -2.2] : [4.70, 3.66];
-          sleepPoseRef.current = Math.random() > 0.5 ? 'side' : 'prone';
-          setSleepPose(sleepPoseRef.current);
         } else {
-          setIsSleeping(true);
-          isSleepingRef.current = true;
-          onSleepChange?.(true);
-          sleepPoseRef.current = Math.random() > 0.5 ? 'side' : 'prone';
-          setSleepPose(sleepPoseRef.current);
+          setIsSleeping(false);
+          isSleepingRef.current = false;
+          onSleepChange?.(false);
         }
       }
     }
 
-    // 4. Định vị tư thế nằm trên ghế lười, sofa hoặc đứng trên sàn
+    // 3. Kiểm tra tiến vào bàn máy tính ngồi chơi game
+    if (targetSpot.current === 'computer') {
+      const d = Math.hypot(p.x - 5.0, p.z - (-3.2));
+      if (d < 0.65) {
+        targetSpot.current = null;
+        targetSpotReason.current = 'click';
+        nav.target = null;
+        duckSpotRef.current = 'computer';
+        setDuckSpot('computer');
+        duckAudio.playJumpSound();
+        setIsGaming(true);
+        isGamingRef.current = true;
+        setIsLounging(false);
+        isLoungingRef.current = false;
+        setIsSleeping(false);
+        isSleepingRef.current = false;
+        onSleepChange?.(false);
+      }
+    }
+
+    // 4. Tự động tương tác khi không tương tác (idle > 10s)
+    if (!openStationKey && !gardenGameOpen && !paused) {
+      const idle = performance.now() - Math.max(lastActiveTime.current, input.lastInteractAt);
+      const IDLE_TIMEOUT_MS = 10000;
+      if (idle > IDLE_TIMEOUT_MS && !targetSpot.current) {
+        if (timeConfig.isNight) {
+          // Ban đêm: Vịt đi lại ghế lười để ngủ
+          if (duckSpotRef.current !== 'beanbag') {
+            if (duckSpotRef.current === 'sofa' || duckSpotRef.current === 'computer') {
+              const wasSofa = duckSpotRef.current === 'sofa';
+              duckSpotRef.current = 'floor';
+              setDuckSpot('floor');
+              isLoungingRef.current = false;
+              setIsLounging(false);
+              isGamingRef.current = false;
+              setIsGaming(false);
+              p.y = 0;
+              duck.rotation.x = 0;
+              if (wasSofa) {
+                p.x = -5.0;
+                p.z = -2.2;
+              } else {
+                p.x = 5.5;
+                p.z = -3.2;
+              }
+            }
+            targetSpotReason.current = 'idle_sleep';
+            targetSpot.current = 'beanbag';
+            nav.target = [4.70, 3.66];
+            nav.pending = null;
+            sleepPoseRef.current = Math.random() > 0.5 ? 'side' : 'prone';
+            setSleepPose(sleepPoseRef.current);
+          } else if (!isSleepingRef.current) {
+            setIsSleeping(true);
+            isSleepingRef.current = true;
+            onSleepChange?.(true);
+            setIsLounging(false);
+            isLoungingRef.current = false;
+            setIsGaming(false);
+            isGamingRef.current = false;
+            sleepPoseRef.current = Math.random() > 0.5 ? 'side' : 'prone';
+            setSleepPose(sleepPoseRef.current);
+          }
+        } else {
+          // Ban ngày: VỊT TUYỆT ĐỐI KHÔNG NGỦ!
+          // Nếu không tương tác sau 10s: vịt sẽ nằm trên ghế lười chill chill HOẶC lại máy tính ngồi chơi game
+          setIsSleeping(false);
+          isSleepingRef.current = false;
+          onSleepChange?.(false);
+
+          if (duckSpotRef.current === 'floor') {
+            // Đang ở trên sàn -> ngẫu nhiên 50/50: ra ghế lười chill HOẶC ra máy tính chơi game
+            const pick = Math.random() > 0.5 ? 'beanbag' : 'computer';
+            if (pick === 'beanbag') {
+              targetSpotReason.current = 'idle_chill';
+              targetSpot.current = 'beanbag';
+              nav.target = [4.70, 3.66];
+              nav.pending = null;
+              sleepPoseRef.current = 'prone';
+              setSleepPose('prone');
+            } else {
+              targetSpotReason.current = 'idle_game';
+              targetSpot.current = 'computer';
+              nav.target = [5.0, -3.2];
+              nav.pending = null;
+            }
+          } else if (duckSpotRef.current === 'beanbag') {
+            if (!isLoungingRef.current) {
+              setIsLounging(true);
+              isLoungingRef.current = true;
+            }
+            if (isGamingRef.current) {
+              setIsGaming(false);
+              isGamingRef.current = false;
+            }
+          } else if (duckSpotRef.current === 'computer') {
+            if (!isGamingRef.current) {
+              setIsGaming(true);
+              isGamingRef.current = true;
+            }
+            if (isLoungingRef.current) {
+              setIsLounging(false);
+              isLoungingRef.current = false;
+            }
+          }
+        }
+      }
+    }
+
+    // 5. Định vị tư thế nằm trên ghế lười, sofa, máy tính hoặc đứng trên sàn
     if (duckSpotRef.current === 'beanbag') {
       const kL = 1 - Math.exp(-dt * 7);
       p.x = THREE.MathUtils.lerp(p.x, 4.70, kL);
@@ -2873,9 +4723,16 @@ function World({
       const kL = 1 - Math.exp(-dt * 7);
       p.x = THREE.MathUtils.lerp(p.x, -5.3, kL);
       p.z = THREE.MathUtils.lerp(p.z, -4.8, kL);
-      p.y = THREE.MathUtils.lerp(p.y, 0.76, kL);
+      p.y = THREE.MathUtils.lerp(p.y, 0.52, kL);
       const targetYaw = 0.15;
       duck.rotation.y = THREE.MathUtils.lerp(duck.rotation.y, targetYaw, kL);
+      duck.rotation.x = THREE.MathUtils.lerp(duck.rotation.x, 0, kL);
+    } else if (duckSpotRef.current === 'computer') {
+      const kL = 1 - Math.exp(-dt * 7);
+      p.x = THREE.MathUtils.lerp(p.x, 6.25, kL);
+      p.z = THREE.MathUtils.lerp(p.z, -3.2, kL);
+      p.y = THREE.MathUtils.lerp(p.y, 0.58, kL);
+      duck.rotation.y = THREE.MathUtils.lerp(duck.rotation.y, Math.PI / 2, kL);
       duck.rotation.x = THREE.MathUtils.lerp(duck.rotation.x, 0, kL);
     } else {
       p.y = THREE.MathUtils.lerp(p.y, 0, 1 - Math.exp(-dt * 12));
@@ -2898,8 +4755,9 @@ function World({
 
     const moving = len > 0.05 && duckSpotRef.current === 'floor';
     motion.current.moving = moving;
-    motion.current.sleeping = isSleepingRef.current;
-    motion.current.lounging = isLoungingRef.current && duckSpotRef.current === 'beanbag' && !isSleepingRef.current;
+    motion.current.sleeping = isSleepingRef.current && !!timeConfig.isNight;
+    motion.current.lounging = isLoungingRef.current && duckSpotRef.current === 'beanbag' && !motion.current.sleeping;
+    motion.current.gaming = isGamingRef.current && duckSpotRef.current === 'computer';
     motion.current.sleepPose = sleepPoseRef.current;
     motion.current.spot = duckSpotRef.current;
 
@@ -2915,16 +4773,20 @@ function World({
     }
 
     // Nearby detection (only notify React on change)
+    // CHỈ nhận diện trạm tương tác khi vịt ĐANG ĐỨNG TRÊN SÀN (duckSpotRef.current === 'floor')
+    // và KHÔNG PHẢI đang trong trạng thái chơi game máy tính hoặc nằm nghỉ ngơi!
     let best: StationKey | null = null;
-    let bestD = 1.35;
-    for (const s of STATIONS) {
-      const d = Math.hypot(p.x - s.interact[0], p.z - s.interact[1]);
-      if (d < bestD) {
-        bestD = d;
-        best = s.key;
+    if (duckSpotRef.current === 'floor' && !isGamingRef.current) {
+      let bestD = 1.35;
+      for (const s of STATIONS) {
+        const d = Math.hypot(p.x - s.interact[0], p.z - s.interact[1]);
+        if (d < bestD) {
+          bestD = d;
+          best = s.key;
+        }
       }
     }
-    if (best !== lastNearby.current) {
+    if (best !== nearby || best !== lastNearby.current) {
       lastNearby.current = best;
       onNearbyChange(best);
     }
@@ -2938,17 +4800,24 @@ function World({
 
     // Follow camera calculation
     const portrait = state.size.width < state.size.height;
-    
+
     // Default overview camera (chế độ thường - góc ấm cúng & gần gũi hơn)
     const onBeanbag = duckSpotRef.current === 'beanbag' || targetSpot.current === 'beanbag';
-    const defPosX = onBeanbag ? 0 : p.x * 0.46;
+    const isGamingOrComputer =
+      duckSpotRef.current === 'computer' ||
+      targetSpot.current === 'computer' ||
+      isGamingRef.current ||
+      targetSpotReason.current === 'idle_game';
+
+    const isOverviewStay = onBeanbag || isGamingOrComputer;
+    const defPosX = isOverviewStay ? 0 : p.x * 0.46;
     const defPosY = portrait ? 11.8 : 8.4;
-    const defPosZ = onBeanbag
+    const defPosZ = isOverviewStay
       ? (portrait ? 11.4 : 9.8)
       : (portrait ? p.z * 0.55 + 11.4 : p.z * 0.38 + 9.8);
-    const defLookX = onBeanbag ? 0 : p.x * 0.62;
+    const defLookX = isOverviewStay ? 0 : p.x * 0.62;
     const defLookY = 0.48;
-    const defLookZ = onBeanbag ? -0.75 : p.z * 0.52 - 0.75;
+    const defLookZ = isOverviewStay ? -0.75 : p.z * 0.52 - 0.75;
 
     let targetCamPos: [number, number, number] = [defPosX, defPosY, defPosZ];
     let targetCamLook: [number, number, number] = [defLookX, defLookY, defLookZ];
@@ -2965,13 +4834,23 @@ function World({
           : cam.openPos;
         targetCamLook = cam.openLook;
       }
+    } else if (stayInOverview.current) {
+      // VIEW TOÀN CẢNH sau khi tắt bảng tin: camera lập tức mở góc nhìn toàn cảnh rộng rãi
+      targetCamPos = portrait ? [0, 11.8, 11.4] : [p.x * 0.25, 8.4, 9.8];
+      targetCamLook = portrait ? [0, 0.48, -0.75] : [p.x * 0.3, 0.48, -0.75];
+
+      // Khi người dùng bắt đầu điều khiển vịt di chuyển đủ xa (> 1.2m) hoặc click đi đến mục khác, tự động thoát chế độ giữ toàn cảnh
+      const moved = Math.hypot(p.x - lastDuckPos.current[0], p.z - lastDuckPos.current[1]);
+      if (moved > 1.2 || (nav.target !== null && nav.pending !== null)) {
+        stayInOverview.current = false;
+      }
     } else if (duckSpotRef.current === 'sofa' && !manualZoomOut.current) {
       // Góc nhìn cận cảnh ấm áp khi vịt ngủ/nghỉ ngơi trên ghế sofa!
       targetCamPos = [-4.6, portrait ? 5.2 : 3.8, portrait ? -0.4 : -1.8];
       targetCamLook = [-5.2, 0.95, -4.8];
-    } else if (onBeanbag) {
-      // Khi vịt ở ghế lười hoặc click di chuyển vào ghế lười: TUYỆT ĐỐI KHÔNG ZOOM!
-      // Giữ góc nhìn toàn cảnh (overview) hoàn hảo như hình người dùng yêu cầu.
+    } else if (isOverviewStay) {
+      // Khi vịt ở ghế lười HOẶC đi lại máy tính chơi game: TUYỆT ĐỐI KHÔNG ZOOM CẬN CẢNH!
+      // Giữ góc nhìn toàn cảnh (overview) hoàn hảo để người dùng ngắm căn phòng và chú vịt chill/chơi game.
       targetCamPos = [0, defPosY, portrait ? 11.4 : 9.8];
       targetCamLook = [0, 0.48, -0.75];
     } else {
@@ -2987,15 +4866,48 @@ function World({
       }
 
       if (manualZoomOut.current) {
-        const moved = Math.hypot(p.x - lastDuckPos.current[0], p.z - lastDuckPos.current[1]);
-        if (moved > 0.65 || (closestStation !== lastClosestStation.current && closestStation !== null)) {
+        // Kiểm tra xem vịt đã đi đủ xa khỏi trạm vừa thu nhỏ chưa (> 3.0m)
+        // hoặc đã bắt đầu tiếp cận một trạm khác (< 2.5m)
+        let isFarEnough = false;
+        if (manualZoomStation.current) {
+          const sDef = getStation(manualZoomStation.current);
+          const d = Math.hypot(p.x - sDef.interact[0], p.z - sDef.interact[1]);
+          if (d > 3.0) isFarEnough = true;
+        } else {
+          const moved = Math.hypot(p.x - manualZoomDuckPos.current[0], p.z - manualZoomDuckPos.current[1]);
+          if (moved > 2.0) isFarEnough = true;
+        }
+
+        const approachingNewStation =
+          closestStation !== null &&
+          closestStation !== manualZoomStation.current &&
+          minDist < 2.5;
+
+        if (isFarEnough || approachingNewStation) {
           manualZoomOut.current = false;
+          manualZoomStation.current = null;
         }
       }
       lastClosestStation.current = closestStation;
 
+      // Nếu vừa tắt bảng thông tin của một trạm, tạm thời không tự động zoom lại vào chính trạm đó
+      // cho đến khi vịt đã rời xa (> 2.8m) hoặc di chuyển lại gần một trạm khác
+      if (closedStationKey.current) {
+        const closedDef = getStation(closedStationKey.current);
+        const distToClosed = Math.hypot(p.x - closedDef.interact[0], p.z - closedDef.interact[1]);
+        if (distToClosed > 2.8 || (closestStation && closestStation !== closedStationKey.current && minDist < 2.5)) {
+          closedStationKey.current = null;
+        }
+      }
+
       const ZOOM_DIST = 2.9;
-      if (closestStation && minDist < ZOOM_DIST && !manualZoomOut.current) {
+      if (
+        closestStation &&
+        minDist < ZOOM_DIST &&
+        !manualZoomOut.current &&
+        closestStation !== closedStationKey.current &&
+        !isGamingOrComputer
+      ) {
         const cam = STATION_CAMERAS[closestStation];
         const factor = Math.max(0, Math.min(1, (ZOOM_DIST - minDist) / 1.7));
         const t = factor * factor * (3 - 2 * factor);
@@ -3018,8 +4930,39 @@ function World({
       }
     }
 
-    tmpPos.set(targetCamPos[0], targetCamPos[1], targetCamPos[2]);
-    tmpLook.set(targetCamLook[0], targetCamLook[1], targetCamLook[2]);
+    // Mượt mà hóa độ thu phóng camera do người dùng cuộn chuột
+    userZoom.current = THREE.MathUtils.lerp(
+      userZoom.current,
+      targetZoom.current,
+      1 - Math.exp(-dt * 9)
+    );
+
+    // Mượt mà hóa độ nghiêng góc nhìn camera khi đè nút cuộn chuột và di chuyển lên xuống
+    userPitch.current = THREE.MathUtils.lerp(
+      userPitch.current,
+      targetPitch.current,
+      1 - Math.exp(-dt * 9)
+    );
+
+    const zoom = userZoom.current;
+    const pitch = userPitch.current;
+
+    const offX = targetCamPos[0] - targetCamLook[0];
+    const offY = targetCamPos[1] - targetCamLook[1];
+    const offZ = targetCamPos[2] - targetCamLook[2];
+
+    const radiusYZ = Math.hypot(offY, offZ);
+    const baseAngle = Math.atan2(offY, offZ);
+    const newAngle = clamp(baseAngle + pitch, 0.28, 1.25);
+    const newOffY = radiusYZ * Math.sin(newAngle);
+    const newOffZ = radiusYZ * Math.cos(newAngle);
+
+    tmpPos.set(
+      targetCamLook[0] + offX * zoom,
+      targetCamLook[1] + newOffY * zoom,
+      targetCamLook[2] + newOffZ * zoom
+    );
+    tmpLook.set(targetCamLook[0], targetCamLook[1] - pitch * 0.7, targetCamLook[2]);
 
     const k = 1 - Math.exp(-dt * 3.4);
     state.camera.position.lerp(tmpPos, k);
@@ -3034,19 +4977,19 @@ function World({
       marker.current.scale.setScalar(0.6 + (1 - a) * 0.8);
     }
 
-    // Dynamic night lighting transition (dim when sleeping, bright when awake)
+    // Dynamic night lighting transition (dim when sleeping, soft warm golden when awake)
     const isDimmed = timeConfig.isNight && isSleepingRef.current;
     const targetPendant = timeConfig.isNight
-      ? (isDimmed ? 2.4 : 24.0)
+      ? (isDimmed ? 3.0 : 22.0)
       : timeConfig.pendantIntensity;
     const targetPendantEmissive = timeConfig.isNight
-      ? (isDimmed ? 0.7 : 4.8)
+      ? (isDimmed ? 0.7 : 3.0)
       : timeConfig.pendantEmissiveIntensity;
     const targetHemi = timeConfig.isNight
-      ? (isDimmed ? 0.18 : 0.46)
+      ? (isDimmed ? 0.20 : 0.45)
       : timeConfig.hemiIntensity;
     const targetDir = timeConfig.isNight
-      ? (isDimmed ? 0.15 : 0.45)
+      ? (isDimmed ? 0.15 : 0.38)
       : timeConfig.dirIntensity;
 
     const kLight = 1 - Math.exp(-dt * 4.5);
@@ -3078,7 +5021,14 @@ function World({
         shadow-camera-right={11}
         shadow-camera-top={9}
         shadow-camera-bottom={-9}
-        shadow-bias={-0.0002}
+        shadow-bias={-0.00015}
+        shadow-radius={3.5}
+      />
+      {/* Indirect GI Floor Bounce Light: Ánh sáng hắt sàn ấm áp mô phỏng Global Illumination */}
+      <directionalLight
+        position={[0, -3.5, 0]}
+        intensity={timeConfig.isNight ? 0.08 : 0.25}
+        color="#f59e0b"
       />
       {/* Soft Window Rim Light - only during day/sunset since night shutters are closed */}
       {!timeConfig.isNight && (
@@ -3088,28 +5038,49 @@ function World({
           color={timeConfig.windowRimColor}
         />
       )}
+      {/* Ambient Atmospheric Floating Dust Motes */}
+      <AtmosphericDust isNight={timeConfig.isNight} />
+
+      {/* Real-time Contact Shadows grounding all furniture and duck */}
+      <ContactShadows
+        position={[0, 0.004, 0]}
+        opacity={0.62}
+        scale={18}
+        blur={2.4}
+        far={4.0}
+        resolution={1024}
+        color="#18110a"
+      />
+
       {/* Pendant lamp */}
       <group position={[0, 0, 1]}>
         <Cyl position={[0, 3.8, 0]} args={[0.015, 0.015, 0.5, 6]} color="#3d2b1f" />
         <mesh position={[0, 3.45, 0]}>
           <coneGeometry args={[0.45, 0.35, 24, 1, true]} />
-          <meshStandardMaterial color="#2a9d8f" side={THREE.DoubleSide} />
+          <meshPhysicalMaterial
+            color="#2a9d8f"
+            roughness={0.32}
+            clearcoat={0.45}
+            clearcoatRoughness={0.15}
+            side={THREE.DoubleSide}
+          />
         </mesh>
         <mesh position={[0, 3.3, 0]}>
           <sphereGeometry args={[0.12, 16, 16]} />
           <meshStandardMaterial
             ref={pendantBulbMatRef}
-            color="#fff3c4"
-            emissive="#ffd27a"
+            color="#fff0b3"
+            emissive="#ff9d26"
             emissiveIntensity={timeConfig.pendantEmissiveIntensity}
           />
         </mesh>
         <pointLight
           ref={pendantLightRef}
-          position={[0, 3.1, 0]}
+          position={[0, 3.1, 0.4]}
           intensity={timeConfig.pendantIntensity}
-          distance={12}
-          color="#ffc977"
+          distance={16}
+          decay={1.6}
+          color="#ffb84d"
         />
       </group>
 
@@ -3132,6 +5103,8 @@ function World({
           timeConfig={timeConfig}
           isDimmed={isSleeping}
           onSofaClick={handleSofaClick}
+          onChairClick={handleChairClick}
+          onDeskClick={handleDeskClick}
           hideLabel={s.key === 'overview' && duckSpot === 'sofa'}
         />
       ))}
@@ -3156,10 +5129,46 @@ function World({
       >
         <Duck
           motion={motion}
-          sleeping={isSleeping}
-          lounging={isLounging && duckSpot === 'beanbag' && !isSleeping}
+          sleeping={isSleeping && !!timeConfig.isNight}
+          lounging={isLounging && duckSpot === 'beanbag' && (!isSleeping || !timeConfig.isNight)}
+          gaming={isGaming && duckSpot === 'computer'}
           sleepPose={sleepPose}
         />
+
+        {/* Khung truyện tranh trong suốt nhẹ ở mục "Về tôi" - có thể hiện như đang nói hoặc đang suy nghĩ */}
+        {openStationKey === 'overview' && (
+          <Html
+            position={[0.04, 1.52, 0.08]}
+            center
+            zIndexRange={[70, 60]}
+          >
+            <div
+              className={`${styles.comicBubbleWrapper} ${bubbleMode === 'thought' ? styles.comicThoughtWrapper : ''
+                }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                duckAudio.playQuack();
+                input.quackAt = performance.now() / 1000;
+                setBubbleMode((prev) => (prev === 'thought' ? 'speech' : 'thought'));
+              }}
+              title="Click để đổi kiểu truyện tranh: Đang suy nghĩ 💭 / Đang nói 💬"
+            >
+              <div className={styles.comicBubble}>
+                {bubbleMode === 'thought' ? '💭 ' : '💬 '}
+                Hãy nhìn vào cặp mắt thơ ngây này đi
+              </div>
+              {bubbleMode === 'thought' ? (
+                <div className={styles.thoughtDots}>
+                  <span className={styles.thoughtDotLg} />
+                  <span className={styles.thoughtDotMd} />
+                  <span className={styles.thoughtDotSm} />
+                </div>
+              ) : (
+                <div className={styles.comicBubbleTail} />
+              )}
+            </div>
+          </Html>
+        )}
       </group>
     </>
   );

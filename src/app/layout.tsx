@@ -3,29 +3,29 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://theduck.io.vn'),
-  title: 'Tôn Đông Vũ (The Duck) | Giải Pháp Phần Mềm Doanh Nghiệp & Vận Hành Sản Xuất',
-  description: 'Portfolio của Tôn Đông Vũ - Hơn 20 năm kinh nghiệm trong ngành sản xuất công nghiệp, bao bì, in ấn & tem nhãn. Chuyên gia tư vấn và phát triển giải pháp phần mềm quản trị doanh nghiệp (MES/ERP), Web App và Desktop App thực chiến.',
+  title: 'Tôn Đông Vũ | Giải Pháp Tem Nhãn - Kỹ Thuật In - Mini ERP',
+  description: 'Tư vấn giải pháp tem nhãn, cung cấp tem nhãn chất lượng cao, giá cả cạnh tranh. Đào tạo thiết kế kỹ thuật in - chế bản prepress thực chiến. Chuyển đổi số, phát triển mini ERP may đo tối ưu cho doanh nghiệp in.',
   keywords: [
     'Tôn Đông Vũ',
-    'Ton Dong Vu',
-    'theduck',
+    'Đông Vũ',
     'theduck.io.vn',
-    'freelancer developer viet nam',
-    'phần mềm in ấn bao bì',
-    'lập trình erp xưởng',
+    'freelancer developer',
+    'phần mềm tem nhãn',
+    'lập trình erp xưởng in',
     'phần mềm mes sản xuất',
     'quản trị sản xuất tem nhãn',
-    'react 19',
-    'nextjs 15',
-    'tauri v2',
-    'clean table rule'
+    'tem nhãn Đồng Nai',
+    'Tem nhãn chuyên nghiệp',
+    'phần mềm theo yêu cầu',
+    'Thiết kế kỹ thuật in',
+    'Cung cấp tem nhãn giá rẻ'
   ],
   authors: [{ name: 'Tôn Đông Vũ', url: 'https://theduck.io.vn' }],
   creator: 'Tôn Đông Vũ',
   publisher: 'Tôn Đông Vũ',
   openGraph: {
-    title: 'Tôn Đông Vũ | Giải Pháp Phần Mềm Doanh Nghiệp & Vận Hành Sản Xuất',
-    description: 'Hơn 20 năm kinh nghiệm sản xuất, in ấn và bao bì. Kết hợp thực tế sàn xưởng và công nghệ phần mềm để tạo nên các công cụ quản trị tinh gọn, hiệu quả.',
+    title: 'Tôn Đông Vũ | Giải Pháp Tem Nhãn - Kỹ Thuật In - Mini ERP',
+    description: 'Tư vấn giải pháp tem nhãn, cung cấp tem nhãn chất lượng cao, giá cả cạnh tranh. Đào tạo thiết kế kỹ thuật in - chế bản prepress thực chiến. Chuyển đổi số, phát triển mini ERP may đo tối ưu cho doanh nghiệp in.',
     url: 'https://theduck.io.vn',
     siteName: 'Tôn Đông Vũ (The Duck) Portfolio',
     locale: 'vi_VN',
@@ -55,8 +55,8 @@ export default function RootLayout({
     url: 'https://theduck.io.vn',
     email: 'thewind2608@gmail.com',
     telephone: '+84939839934',
-    jobTitle: 'Chuyên Gia Vận Hành Sản Xuất & Kiến Trúc Phần Mềm Doanh Nghiệp',
-    description: 'Hơn 20 năm kinh nghiệm ngành in ấn, bao bì, tem nhãn kết hợp công nghệ phần mềm thực chiến.',
+    jobTitle: 'Giải Pháp Tem Nhãn - Kỹ Thuật In - Mini ERP',
+    description: 'Hơn 15 năm kinh nghiệm ngành in ấn, bao bì, tem nhãn kết hợp công nghệ phần mềm thực chiến.',
     knowsAbout: [
       'Next.js',
       'React',
@@ -77,9 +77,14 @@ export default function RootLayout({
     <html lang="vi" suppressHydrationWarning>
       <head>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦆</text></svg>" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&family=Mali:ital,wght@0,600;0,700;0,800;1,700&family=Patrick+Hand&display=swap" rel="stylesheet" />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
+          }}
         />
       </head>
       <body suppressHydrationWarning>

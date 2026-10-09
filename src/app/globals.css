@@ -1,9 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800;900&family=Mali:wght@600;700;800&family=Patrick+Hand&family=Comic+Neue:wght@700&display=swap');
 
 :root {
   --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --font-comic: 'Comic Sans MS', 'Mali', 'Patrick Hand', 'Comic Neue', cursive, sans-serif;
 
   /* Color System - Clean Engineering Aesthetic */
   --bg-main: #0a0e17;

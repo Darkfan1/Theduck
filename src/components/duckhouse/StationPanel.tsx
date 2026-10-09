@@ -52,7 +52,7 @@ function Overview() {
         </div>
       </div>
 
-      <p className={styles.lead} style={{ color: '#38bdf8' }}>{personal.title}</p>
+      <p className={styles.lead} style={{ color: '#0284c7' }}>{personal.title}</p>
       
       <p className={styles.body}>
         {personal.shortBio}
@@ -68,7 +68,7 @@ function Overview() {
             <div key={srv.title} className={styles.card} style={{ borderLeft: '3px solid #f59e0b', padding: '10px 12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '1.15rem' }}>{srv.icon}</span>
-                <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f8fafc' }}>
+                <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>
                   {srv.title}
                 </span>
               </div>

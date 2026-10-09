@@ -481,6 +481,49 @@ function RelaxBlissBubble({ lounging, sleeping }: { lounging?: boolean; sleeping
   );
 }
 
+function GameBubble({ gaming }: { gaming?: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const texture = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const c = document.createElement('canvas');
+    c.width = 128;
+    c.height = 128;
+    const ctx = c.getContext('2d');
+    if (!ctx) return null;
+    ctx.font = '64px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🎮', 64, 64);
+    return new THREE.CanvasTexture(c);
+  }, []);
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    const visible = Boolean(gaming);
+    groupRef.current.visible = visible;
+    if (!visible) return;
+
+    const t = clock.elapsedTime;
+    const cycle = (t * 0.7) % 2.2;
+    const p = cycle / 2.2;
+    const rise = p * 0.55;
+    const sway = Math.sin(p * Math.PI * 2) * 0.08;
+    groupRef.current.position.set(0.1 + sway, 1.45 + rise, 0.15);
+    const scale = Math.sin(p * Math.PI) * 0.55;
+    groupRef.current.scale.set(scale, scale, scale);
+  });
+
+  if (!texture) return null;
+  return (
+    <Billboard ref={groupRef} visible={false}>
+      <mesh>
+        <planeGeometry args={[0.5, 0.5]} />
+        <meshBasicMaterial map={texture} transparent depthWrite={false} />
+      </mesh>
+    </Billboard>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Sunglasses & Cozy Blanket Accessories                               */
 /* ------------------------------------------------------------------ */
@@ -631,12 +674,13 @@ function CozyBlanket({ visible, pose }: { visible: boolean; pose?: SleepPose }) 
 /* ------------------------------------------------------------------ */
 
 export type SleepPose = 'side' | 'prone';
-export type DuckSpot = 'floor' | 'beanbag' | 'sofa';
+export type DuckSpot = 'floor' | 'beanbag' | 'sofa' | 'computer';
 
 export interface DuckMotion {
   moving: boolean;
   sleeping?: boolean;
   lounging?: boolean;
+  gaming?: boolean;
   sleepPose?: SleepPose;
   spot?: DuckSpot;
 }
@@ -645,23 +689,27 @@ export function Duck({
   motion,
   sleeping = false,
   lounging = false,
+  gaming = false,
   sleepPose = 'side',
 }: {
   motion: React.RefObject<DuckMotion>;
   sleeping?: boolean;
   lounging?: boolean;
+  gaming?: boolean;
   sleepPose?: SleepPose;
 }) {
   const rig = useMemo(() => {
     const geo = buildDuckBodyGeometry();
     const mat = new THREE.MeshPhysicalMaterial({
       vertexColors: true,
-      roughness: 0.5,
+      roughness: 0.36,
+      metalness: 0.02,
       sheen: 1,
-      sheenRoughness: 0.4,
-      sheenColor: new THREE.Color('#fff4c2'),
-      clearcoat: 0.2,
-      clearcoatRoughness: 0.55,
+      sheenRoughness: 0.32,
+      sheenColor: new THREE.Color('#fff9d2'),
+      clearcoat: 0.52,
+      clearcoatRoughness: 0.15,
+      ior: 1.48,
     });
     const root = new THREE.Bone();
     const headBone = new THREE.Bone();
@@ -729,6 +777,7 @@ export function Duck({
     const moving = motion.current?.moving ?? false;
     const isSleeping = motion.current?.sleeping ?? sleeping;
     const isLounging = motion.current?.lounging ?? lounging;
+    const isGaming = motion.current?.gaming ?? gaming;
     const currentSleepPose = motion.current?.sleepPose ?? sleepPose ?? 'side';
     const q = performance.now() / 1000 - input.quackAt;
     const quacking = q >= 0 && q < 0.6;
@@ -749,6 +798,8 @@ export function Duck({
       bob = Math.sin(t * 1.8) * 0.016;
     } else if (isLounging) {
       bob = Math.sin(t * 1.4) * 0.012;
+    } else if (isGaming) {
+      bob = Math.sin(t * 5.0) * 0.012;
     } else {
       bob = moving ? Math.abs(Math.sin(ph)) * 0.06 : Math.sin(t * 2) * 0.01;
     }
@@ -759,6 +810,7 @@ export function Duck({
     if (quacking) sy = 1 + Math.cos(jp * Math.PI) * 0.18;
     else if (isSleeping) sy = 1 + Math.sin(t * 1.8) * 0.035;
     else if (isLounging) sy = 1 + Math.sin(t * 1.4) * 0.025;
+    else if (isGaming) sy = 1 + Math.sin(t * 4.0) * 0.018;
     else if (moving) sy = 1 + Math.sin(ph * 2) * 0.035;
     else sy = 1 + Math.sin(t * 2.2) * 0.014;
     const sxz = 1 / Math.sqrt(sy); // volume preserving
@@ -785,6 +837,13 @@ export function Duck({
         inner.current.rotation.z = THREE.MathUtils.lerp(inner.current.rotation.z, 0, k(10));
         inner.current.position.x = THREE.MathUtils.lerp(inner.current.position.x, 0, k(10));
         inner.current.position.z = THREE.MathUtils.lerp(inner.current.position.z, 0.08, k(10));
+      } else if (isGaming) {
+        // Ngồi vững trên ghế xoay văn phòng, hướng về phía bàn máy tính
+        inner.current.position.y = THREE.MathUtils.lerp(inner.current.position.y, -0.02 + bob, k(10));
+        inner.current.rotation.x = THREE.MathUtils.lerp(inner.current.rotation.x, 0.08, k(10));
+        inner.current.rotation.z = THREE.MathUtils.lerp(inner.current.rotation.z, Math.sin(t * 6) * 0.03, k(10));
+        inner.current.position.x = THREE.MathUtils.lerp(inner.current.position.x, 0, k(10));
+        inner.current.position.z = THREE.MathUtils.lerp(inner.current.position.z, 0, k(10));
       } else {
         inner.current.position.y = duckY.current;
         inner.current.rotation.z = THREE.MathUtils.lerp(inner.current.rotation.z, moving ? Math.sin(ph) * 0.12 : 0, k(14));
@@ -817,6 +876,11 @@ export function Duck({
       hx = 0.18;
       hz = 0;
       hy = Math.sin(t * 0.8) * 0.06;
+    } else if (isGaming) {
+      // Hướng đầu chăm chú nhìn vào màn hình máy tính chơi game!
+      hx = -0.12 + Math.sin(t * 5) * 0.04;
+      hz = Math.sin(t * 3.5) * 0.03;
+      hy = Math.sin(t * 4) * 0.06;
     } else if (moving) {
       hz = -Math.sin(ph) * 0.09;
       hx = -0.2 + Math.sin(ph * 2) * 0.04;
@@ -834,12 +898,12 @@ export function Duck({
 
     // Tail wag
     const tb = rig.tailBone;
-    const wag = moving ? Math.sin(ph) * 0.35 : isSleeping ? 0 : t % 4 < 0.6 ? Math.sin(t * 22) * 0.25 : 0;
+    const wag = moving ? Math.sin(ph) * 0.35 : isSleeping ? 0 : isGaming ? Math.sin(t * 18) * 0.2 : t % 4 < 0.6 ? Math.sin(t * 22) * 0.25 : 0;
     tb.rotation.y = THREE.MathUtils.lerp(tb.rotation.y, wag, k(18));
     tb.rotation.x = THREE.MathUtils.lerp(tb.rotation.x, moving ? -0.12 : -0.04, k(6));
 
     // Blink / Sleep / Relax
-    const blink = isSleeping ? 0.05 : isLounging ? 0.55 : t % 3.6 > 3.48 ? 0.1 : 1;
+    const blink = isSleeping ? 0.05 : isLounging ? 0.55 : isGaming ? (t % 4.5 > 4.38 ? 0.1 : 1) : t % 3.6 > 3.48 ? 0.1 : 1;
     if (eyeL.current) eyeL.current.scale.y = THREE.MathUtils.lerp(eyeL.current.scale.y, blink, k(25));
     if (eyeR.current) eyeR.current.scale.y = THREE.MathUtils.lerp(eyeR.current.scale.y, blink, k(25));
 
@@ -862,6 +926,10 @@ export function Duck({
     } else if (isLounging) {
       flapL = 0.62;
       flapR = -0.62;
+    } else if (isGaming) {
+      // Đôi cánh gõ phím / bấm chuột chơi game lia lịa!
+      flapL = 0.22 + Math.sin(t * 14) * 0.12;
+      flapR = -(0.22 + Math.cos(t * 14) * 0.12);
     } else if (moving) {
       const fl = Math.abs(Math.sin(ph * 2)) * 0.15;
       flapL = fl;
@@ -911,6 +979,20 @@ export function Duck({
         footR.current.rotation.z = THREE.MathUtils.lerp(footR.current.rotation.z, -0.82, k(15)); // Dang rộng sang phải
         footL.current.rotation.y = THREE.MathUtils.lerp(footL.current.rotation.y, -0.5, k(15));   // Bàn chân mở xòe ra
         footR.current.rotation.y = THREE.MathUtils.lerp(footR.current.rotation.y, 0.5, k(15));
+      } else if (isGaming) {
+        // Ngồi trên ghế xoay, chân đung đưa gõ nhịp
+        footL.current.position.x = THREE.MathUtils.lerp(footL.current.position.x, 0.14, k(15));
+        footR.current.position.x = THREE.MathUtils.lerp(footR.current.position.x, -0.14, k(15));
+        footL.current.position.y = THREE.MathUtils.lerp(footL.current.position.y, 0.08 + Math.sin(t * 8) * 0.015, k(15));
+        footR.current.position.y = THREE.MathUtils.lerp(footR.current.position.y, 0.08 + Math.cos(t * 8) * 0.015, k(15));
+        footL.current.position.z = THREE.MathUtils.lerp(footL.current.position.z, 0.06, k(15));
+        footR.current.position.z = THREE.MathUtils.lerp(footR.current.position.z, 0.06, k(15));
+        footL.current.rotation.x = THREE.MathUtils.lerp(footL.current.rotation.x, 0.35, k(15));
+        footR.current.rotation.x = THREE.MathUtils.lerp(footR.current.rotation.x, 0.35, k(15));
+        footL.current.rotation.z = THREE.MathUtils.lerp(footL.current.rotation.z, 0, k(15));
+        footR.current.rotation.z = THREE.MathUtils.lerp(footR.current.rotation.z, 0, k(15));
+        footL.current.rotation.y = THREE.MathUtils.lerp(footL.current.rotation.y, 0, k(15));
+        footR.current.rotation.y = THREE.MathUtils.lerp(footR.current.rotation.y, 0, k(15));
       } else {
         const sL = moving ? Math.sin(ph) : 0;
         footL.current.rotation.x = THREE.MathUtils.lerp(footL.current.rotation.x, sL * 0.6, k(20));
@@ -931,6 +1013,7 @@ export function Duck({
 
   const isSleeping = motion.current?.sleeping ?? sleeping;
   const isLounging = motion.current?.lounging ?? lounging;
+  const isGaming = motion.current?.gaming ?? gaming;
   const currentSleepPose = motion.current?.sleepPose ?? sleepPose ?? 'side';
 
   return (
@@ -939,6 +1022,7 @@ export function Duck({
       <QuackBubble />
       <SleepZzzBubble sleeping={isSleeping} />
       <RelaxBlissBubble lounging={isLounging} sleeping={isSleeping} />
+      <GameBubble gaming={isGaming} />
       <CozyBlanket visible={Boolean(isSleeping)} pose={currentSleepPose} />
 
       <group ref={inner} scale={0.96}>
@@ -957,7 +1041,7 @@ export function Duck({
               <group ref={ref}>
                 <mesh scale={[1, 1.12, 0.55]}>
                   <sphereGeometry args={[0.062, 32, 24]} />
-                  <meshPhysicalMaterial color="#141022" roughness={0.15} clearcoat={1} clearcoatRoughness={0.05} />
+                  <meshPhysicalMaterial color="#090614" roughness={0.06} clearcoat={1.0} clearcoatRoughness={0.02} />
                 </mesh>
                 <mesh position={[0.018, 0.026, 0.03]}>
                   <sphereGeometry args={[0.019, 16, 12]} />
@@ -988,7 +1072,7 @@ export function Duck({
 
           {/* Upper bill – sculpted spoon shape, sunk into the face */}
           <mesh geometry={assets.beakUpper} position={[HC[0], HC[1] - 0.06, HC[2] + 0.27]} castShadow>
-            <meshPhysicalMaterial color={BEAK} roughness={0.35} clearcoat={0.4} clearcoatRoughness={0.3} />
+            <meshPhysicalMaterial color={BEAK} roughness={0.22} clearcoat={0.65} clearcoatRoughness={0.10} />
           </mesh>
           {[-0.035, 0.035].map((x) => (
             <mesh key={x} position={[HC[0] + x, HC[1] - 0.012, HC[2] + 0.35]} scale={[1, 0.5, 1.4]}>
@@ -1000,7 +1084,7 @@ export function Duck({
           {/* Lower bill (hinged) */}
           <group ref={lowerBeak} position={[HC[0], HC[1] - 0.088, HC[2] + 0.18]}>
             <mesh geometry={assets.beakLower} position={[0, 0, 0.09]}>
-              <meshPhysicalMaterial color={BEAK_DARK} roughness={0.4} clearcoat={0.3} />
+              <meshPhysicalMaterial color={BEAK_DARK} roughness={0.26} clearcoat={0.55} clearcoatRoughness={0.14} />
             </mesh>
             <mesh position={[0, 0.012, 0.07]} scale={[0.75, 0.22, 1]}>
               <sphereGeometry args={[0.07, 20, 12]} />
@@ -1012,10 +1096,10 @@ export function Duck({
           <group position={HC} rotation={[-0.32, 0, 0]}>
             <mesh position={[0, 0.02, 0]} castShadow>
               <sphereGeometry args={[0.305, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2.25]} />
-              <meshPhysicalMaterial color={CAP_BLUE} roughness={0.6} sheen={0.6} sheenColor="#93c5fd" side={THREE.DoubleSide} />
+              <meshPhysicalMaterial color={CAP_BLUE} roughness={0.52} sheen={0.8} sheenColor="#93c5fd" side={THREE.DoubleSide} />
             </mesh>
             <mesh geometry={assets.brim} position={[0, 0.115, 0.2]} rotation={[Math.PI / 2 + 0.15, 0, 0]} castShadow>
-              <meshPhysicalMaterial color={CAP_BRIM} roughness={0.55} sheen={0.5} sheenColor="#93c5fd" />
+              <meshPhysicalMaterial color={CAP_BRIM} roughness={0.52} sheen={0.7} sheenColor="#93c5fd" />
             </mesh>
             <mesh position={[0, 0.322, 0]}>
               <sphereGeometry args={[0.032, 16, 12]} />
@@ -1027,12 +1111,12 @@ export function Duck({
         {/* Wings – teardrop shapes that hug the body */}
         <group ref={wingL} position={[0.33, 0.6, 0.12]}>
           <mesh geometry={assets.wing} position={[0.035, -0.06, -0.16]} rotation={[0.3, -0.12, 0]} castShadow>
-            <meshPhysicalMaterial color={WING} roughness={0.5} sheen={1} sheenColor="#fff1b0" sheenRoughness={0.45} />
+            <meshPhysicalMaterial color={WING} roughness={0.36} sheen={1} sheenColor="#fff4b8" sheenRoughness={0.32} clearcoat={0.35} clearcoatRoughness={0.18} />
           </mesh>
         </group>
         <group ref={wingR} position={[-0.33, 0.6, 0.12]}>
           <mesh geometry={assets.wing} position={[-0.035, -0.06, -0.16]} rotation={[0.3, 0.12, 0]} scale={[-1, 1, 1]} castShadow>
-            <meshPhysicalMaterial color={WING} roughness={0.5} sheen={1} sheenColor="#fff1b0" sheenRoughness={0.45} side={THREE.DoubleSide} />
+            <meshPhysicalMaterial color={WING} roughness={0.36} sheen={1} sheenColor="#fff4b8" sheenRoughness={0.32} clearcoat={0.35} clearcoatRoughness={0.18} side={THREE.DoubleSide} />
           </mesh>
         </group>
 
@@ -1044,10 +1128,10 @@ export function Duck({
           <group key={x} ref={ref} position={[x, 0.16, 0.04]}>
             <mesh position={[0, -0.06, 0]} castShadow>
               <capsuleGeometry args={[0.026, 0.1, 6, 12]} />
-              <meshPhysicalMaterial color={LEG} roughness={0.4} clearcoat={0.3} />
+              <meshPhysicalMaterial color={LEG} roughness={0.32} clearcoat={0.4} clearcoatRoughness={0.18} />
             </mesh>
             <mesh geometry={assets.foot} position={[0, -0.128, -0.005]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-              <meshPhysicalMaterial color={LEG} roughness={0.4} clearcoat={0.3} />
+              <meshPhysicalMaterial color={LEG} roughness={0.32} clearcoat={0.45} clearcoatRoughness={0.16} />
             </mesh>
           </group>
         ))}
